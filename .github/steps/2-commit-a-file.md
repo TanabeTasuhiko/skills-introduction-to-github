@@ -1,52 +1,52 @@
-## Step 2: Commit a file
+## ステップ 2: ファイルをコミットする
 
-_You created a branch! :tada:_
+_ブランチを作成しました！ :tada:_
 
-Creating a branch allows you to edit your project without changing the `main` branch. Now that you have a branch, it’s time to create a file and make your first commit!
+ブランチを作成すると、`main`ブランチを変更せずにプロジェクトを編集できます。ブランチができたので、ファイルを作成して最初のコミットを行いましょう！
 
-**What is a commit?**: A _[commit](https://docs.github.com/pull-requests/committing-changes-to-your-project/creating-and-editing-commits/about-commits)_ is a set of changes to the files and folders in your project. A commit exists in a branch. For more information, see "[About commits](https://docs.github.com/en/pull-requests/committing-changes-to-your-project/creating-and-editing-commits/about-commits)".
+**コミットとは？**: _[コミット](https://docs.github.com/ja/pull-requests/committing-changes-to-your-project/creating-and-editing-commits/about-commits)_は、プロジェクト内のファイルやフォルダに対する一連の変更です。コミットはブランチ内に存在します。詳しくは、「[コミットについて](https://docs.github.com/ja/pull-requests/committing-changes-to-your-project/creating-and-editing-commits/about-commits)」をご覧ください。
 
-### :keyboard: Activity: Your first commit
+### :keyboard: アクティビティ: 最初のコミット
 
-The following steps will guide you through the process of committing a change on GitHub. A commit records changes to the project such as adding/removing/renaming files and modifying file content. For this exercise, committing a change will be adding a new file to your new branch.
+以下の手順では、GitHub上で変更をコミットするプロセスを説明します。コミットは、ファイルの追加/削除/名前変更やファイル内容の変更など、プロジェクトへの変更を記録します。この演習では、新しいブランチに新しいファイルを追加することでコミットを行います。
 
 > [!NOTE]
-> `.md` is a file extension that creates a Markdown file. You can learn more about Markdown by visiting "[Basic writing and formatting syntax](https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax)" in our docs or by taking the "[Communicating using Markdown](https://github.com/skills/communicate-using-markdown)" Skills Exercise.
+> `.md`はMarkdownファイルを作成するファイル拡張子です。Markdownについて詳しくは、ドキュメントの「[基本的な書式設定の構文](https://docs.github.com/ja/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax)」を参照するか、「[Markdownを使用したコミュニケーション](https://github.com/skills/communicate-using-markdown)」スキル演習を行ってください。
 
-1. On the **< > Code** tab in the header menu of your repository, make sure you're on your new branch `my-first-branch`.
+1. リポジトリのヘッダーメニューにある **< > Code** タブで、新しいブランチ `my-first-branch` にいることを確認します。
 
-2. Select the **Add file** drop-down and click **Create new file**.
+2. **Add file** ドロップダウンを選択し、**Create new file** をクリックします。
 
-   <img width="300" alt="screenshot of the create new file option" src="https://github.com/user-attachments/assets/cfb062cd-be60-4f12-948c-0946a6fe01da">
+   <img width="300" alt="新規ファイル作成オプションのスクリーンショット" src="https://github.com/user-attachments/assets/cfb062cd-be60-4f12-948c-0946a6fe01da">
 
-3. In the **Name your file...** field, enter `PROFILE.md`.
+3. **Name your file...** フィールドに `PROFILE.md` と入力します。
 
-4. In the **Enter file contents here** area, copy the following content to your file:
+4. **Enter file contents here** エリアに、以下の内容をコピーして貼り付けます：
 
    ```
    Welcome to my GitHub profile!
    ```
 
-   ![screenshot for adding the profile.md file](https://github.com/user-attachments/assets/e00540be-4334-4d0d-adc2-9893b5477a91)
+   ![profile.mdファイルの追加のスクリーンショット](https://github.com/user-attachments/assets/e00540be-4334-4d0d-adc2-9893b5477a91)
 
-5. Click **Commit changes...** in the upper right corner above the contents box. A dialog will appear.
+5. コンテンツボックスの右上にある **Commit changes...** をクリックします。ダイアログが表示されます。
 
-6. GitHub offers a simple default message, but let's change it slightly for practice. Enter `Add PROFILE.md` in the **Commit message** field.
-   
-   - A **commit message** and optional **extended description** help provide clarity for your changes. This is particularly useful when your commit involves several files.
+6. GitHubはシンプルなデフォルトメッセージを提供しますが、練習のために少し変更しましょう。**Commit message** フィールドに `Add PROFILE.md` と入力します。
 
-   <img width="400" alt="screenshot of adding a new file with a commit message" src="https://github.com/user-attachments/assets/6ab299ce-8039-4734-a707-d7c3cd7077a0">
+   - **コミットメッセージ**とオプションの**拡張説明**は、変更内容を明確にするのに役立ちます。これは特にコミットに複数のファイルが含まれる場合に便利です。
 
-6. In this lesson, we'll ignore the other fields for now and click **Commit changes**.
+   <img width="400" alt="コミットメッセージ付きの新規ファイル追加のスクリーンショット" src="https://github.com/user-attachments/assets/6ab299ce-8039-4734-a707-d7c3cd7077a0">
 
-7. Now that you've changed a file, Mona should already be busy checking your work. Give her a moment and keep watch in the comments. You will see her respond with progress info and the next lesson.
+6. このレッスンでは、他のフィールドは無視して **Commit changes** をクリックします。
+
+7. ファイルを変更したので、Monaがあなたの作業をチェックしているはずです。少し待って、コメントを確認してください。進捗情報と次のレッスンが表示されます。
 
 
 <details>
-<summary>Having trouble? 🤷</summary><br/>
+<summary>困っていますか？ 🤷</summary><br/>
 
-If you don't get feedback, here are some things to check:
-- Make sure you are on the `my-first-branch` branch.
-- Ensure the `PROFILE.md` file is created and in the root folder.
+フィードバックが得られない場合は、以下を確認してください：
+- `my-first-branch` ブランチにいることを確認してください。
+- `PROFILE.md` ファイルがルートフォルダに作成されていることを確認してください。
 
 </details>
