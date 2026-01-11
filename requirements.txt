@@ -7,7 +7,8 @@ google-api-python-client>=2.100.0
 google-auth-httplib2>=0.1.1
 google-auth-oauthlib>=1.1.0
 
-# OCR機能追加時に必要（将来の拡張用）
-# Required for OCR functionality (future extension)
-# pytesseract>=0.3.10
-# Pillow>=10.0.0
+# OCR機能（実装済み）
+# Required for OCR functionality
+pytesseract>=0.3.10
+Pillow>=10.0.0
+numpy>=1.24.0
