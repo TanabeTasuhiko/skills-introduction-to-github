@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>製造業 粗利改善シミュレーター</title>
+<style>
+  :root {
+    --primary: #1a5276;
+    --primary-light: #2980b9;
+    --accent: #e74c3c;
+    --bg: #f4f6f9;
+    --card: #ffffff;
+    --border: #dce1e8;
+    --text: #2c3e50;
+    --text-light: #7f8c8d;
+    --success: #27ae60;
+    --warning: #f39c12;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', 'Hiragino Sans', 'Meiryo', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  header {
+    background: linear-gradient(135deg, var(--primary), var(--primary-light));
+    color: #fff;
+    padding: 24px 20px;
+    text-align: center;
+  }
+
+  header h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+
+  header p {
+    font-size: 0.85rem;
+    opacity: 0.85;
+    margin-top: 4px;
+  }
+
+  .container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px 16px 40px;
+  }
+
+  .card {
+    background: var(--card);
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+
+  .card-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--primary);
+    border-bottom: 2px solid var(--primary);
+    padding-bottom: 8px;
+    margin-bottom: 20px;
+  }
+
+  .form-group {
+    margin-bottom: 16px;
+  }
+
+  .form-group label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: var(--text);
+  }
+
+  .form-group .hint {
+    font-size: 0.75rem;
+    color: var(--text-light);
+    margin-bottom: 4px;
+  }
+
+  .form-group input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1.5px solid var(--border);
+    border-radius: 6px;
+    font-size: 1rem;
+    color: var(--text);
+    transition: border-color 0.2s;
+  }
+
+  .form-group input:focus {
+    outline: none;
+    border-color: var(--primary-light);
+    box-shadow: 0 0 0 3px rgba(41,128,185,0.12);
+  }
+
+  .form-group input.readonly {
+    background: #f0f3f7;
+    color: var(--text-light);
+    cursor: default;
+  }
+
+  .cost-breakdown {
+    background: #f8f9fb;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+
+  .cost-breakdown .breakdown-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--primary);
+    margin-bottom: 12px;
+  }
+
+  .cost-breakdown .form-group {
+    margin-bottom: 12px;
+  }
+
+  .cost-breakdown .form-group:last-child {
+    margin-bottom: 0;
+  }
+
+  .row {
+    display: flex;
+    gap: 16px;
+  }
+
+  .row > .form-group {
+    flex: 1;
+  }
+
+  .target-mode {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .target-mode button {
+    flex: 1;
+    padding: 10px;
+    border: 1.5px solid var(--border);
+    border-radius: 6px;
+    background: var(--card);
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-light);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .target-mode button.active {
+    border-color: var(--primary);
+    background: var(--primary);
+    color: #fff;
+  }
+
+  .btn-calc {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, var(--primary), var(--primary-light));
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.05rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    margin-top: 8px;
+  }
+
+  .btn-calc:hover {
+    opacity: 0.9;
+  }
+
+  .result-section {
+    display: none;
+  }
+
+  .result-section.show {
+    display: block;
+  }
+
+  .result-highlight {
+    text-align: center;
+    padding: 24px;
+    background: linear-gradient(135deg, #ebf5fb, #d4efdf);
+    border-radius: 10px;
+    margin-bottom: 20px;
+  }
+
+  .result-highlight .label {
+    font-size: 0.9rem;
+    color: var(--text-light);
+    margin-bottom: 4px;
+  }
+
+  .result-highlight .value {
+    font-size: 2.4rem;
+    font-weight: 800;
+    color: var(--accent);
+  }
+
+  .result-highlight .value.positive {
+    color: var(--accent);
+  }
+
+  .result-highlight .value.negative {
+    color: var(--success);
+  }
+
+  .result-highlight .sub {
+    font-size: 0.85rem;
+    color: var(--text-light);
+    margin-top: 4px;
+  }
+
+  .comparison-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .comparison-table th,
+  .comparison-table td {
+    padding: 10px 12px;
+    text-align: right;
+    font-size: 0.9rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .comparison-table th {
+    text-align: left;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .comparison-table thead th {
+    background: #f0f3f7;
+    font-size: 0.8rem;
+    color: var(--text-light);
+    text-align: center;
+  }
+
+  .comparison-table thead th:first-child {
+    text-align: left;
+  }
+
+  .comparison-table .diff-positive {
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .comparison-table .diff-negative {
+    color: var(--success);
+    font-weight: 600;
+  }
+
+  .comparison-table .row-highlight {
+    background: #fef9e7;
+  }
+
+  .comparison-table .row-highlight th,
+  .comparison-table .row-highlight td {
+    font-weight: 700;
+  }
+
+  .note {
+    font-size: 0.78rem;
+    color: var(--text-light);
+    margin-top: 12px;
+    padding: 10px;
+    background: #fef9e7;
+    border-radius: 6px;
+    border-left: 3px solid var(--warning);
+  }
+
+  .error-msg {
+    color: var(--accent);
+    font-size: 0.82rem;
+    margin-top: 4px;
+    display: none;
+  }
+
+  .error-msg.show {
+    display: block;
+  }
+
+  .reset-btn {
+    display: inline-block;
+    margin-top: 12px;
+    padding: 8px 20px;
+    background: var(--text-light);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+
+  .reset-btn:hover {
+    opacity: 0.8;
+  }
+
+  footer {
+    text-align: center;
+    padding: 20px;
+    font-size: 0.75rem;
+    color: var(--text-light);
+  }
+
+  @media (max-width: 600px) {
+    .row { flex-direction: column; gap: 0; }
+    header h1 { font-size: 1.2rem; }
+    .result-highlight .value { font-size: 1.8rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>製造業 粗利改善シミュレーター</h1>
+  <p>試算表の粗利と理論値の差から必要な値上げ率を算出</p>
+</header>
+
+<div class="container">
+
+  <!-- 現状データ入力 -->
+  <div class="card">
+    <div class="card-title">現状の試算表データ</div>
+
+    <div class="form-group">
+      <label for="sales">売上高（円）</label>
+      <input type="text" id="sales" inputmode="numeric" placeholder="例: 100,000,000">
+    </div>
+
+    <div class="cost-breakdown">
+      <div class="breakdown-title">売上原価の内訳</div>
+      <div class="form-group">
+        <label for="material">材料費（円）</label>
+        <input type="text" id="material" inputmode="numeric" placeholder="例: 30,000,000">
+      </div>
+      <div class="form-group">
+        <label for="labor">労務費（円）</label>
+        <input type="text" id="labor" inputmode="numeric" placeholder="例: 15,000,000">
+      </div>
+      <div class="form-group">
+        <label for="overhead">製造経費（円）</label>
+        <input type="text" id="overhead" inputmode="numeric" placeholder="例: 10,000,000">
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="form-group">
+        <label>売上原価 合計（自動計算）</label>
+        <input type="text" id="cogs" class="readonly" readonly>
+      </div>
+      <div class="form-group">
+        <label>現状 粗利額（自動計算）</label>
+        <input type="text" id="currentGrossProfit" class="readonly" readonly>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>現状 粗利率（自動計算）</label>
+      <input type="text" id="currentGrossMargin" class="readonly" readonly>
+    </div>
+  </div>
+
+  <!-- 目標設定 -->
+  <div class="card">
+    <div class="card-title">理論値（目標）の設定</div>
+
+    <div class="target-mode">
+      <button id="modeRate" class="active" onclick="setTargetMode('rate')">粗利率で指定</button>
+      <button id="modeAmount" onclick="setTargetMode('amount')">粗利額で指定</button>
+    </div>
+
+    <div id="targetRateGroup" class="form-group">
+      <label for="targetRate">目標 粗利率（%）</label>
+      <div class="hint">業界標準や理論値の粗利率を入力</div>
+      <input type="text" id="targetRate" inputmode="decimal" placeholder="例: 45.0">
+    </div>
+
+    <div id="targetAmountGroup" class="form-group" style="display:none;">
+      <label for="targetAmount">目標 粗利額（円）</label>
+      <div class="hint">達成したい粗利の金額を入力</div>
+      <input type="text" id="targetAmount" inputmode="numeric" placeholder="例: 50,000,000">
+    </div>
+  </div>
+
+  <!-- 計算ボタン -->
+  <button class="btn-calc" onclick="calculate()">値上げ率を計算する</button>
+  <div id="errorMsg" class="error-msg"></div>
+
+  <!-- 結果表示 -->
+  <div id="resultSection" class="result-section">
+
+    <div class="result-highlight">
+      <div class="label">目標粗利を達成するための</div>
+      <div class="label" style="font-weight:700; font-size:1.05rem; color:var(--text);">必要値上げ率</div>
+      <div id="resultRate" class="value"></div>
+      <div id="resultSub" class="sub"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">値上げ前後の比較</div>
+      <table class="comparison-table">
+        <thead>
+          <tr>
+            <th>項目</th>
+            <th>現状</th>
+            <th>値上げ後</th>
+            <th>差額</th>
+          </tr>
+        </thead>
+        <tbody id="comparisonBody">
+        </tbody>
+      </table>
+      <div class="note">
+        ※ 値上げにより売上単価のみ変動し、原価（材料費・労務費・製造経費）は変わらない前提で計算しています。
+        販売数量の変動は考慮していません。
+      </div>
+    </div>
+
+    <div style="text-align:center;">
+      <button class="reset-btn" onclick="resetForm()">条件を変更して再計算</button>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  製造業 粗利改善シミュレーター &copy; 2026
+</footer>
+
+<script>
+  let targetMode = 'rate';
+
+  // 数値フォーマット関連
+  function parseNum(str) {
+    if (!str) return 0;
+    return parseFloat(String(str).replace(/[,、]/g, '').replace(/[％%]/g, '')) || 0;
+  }
+
+  function formatNum(n) {
+    if (isNaN(n) || n === null) return '';
+    return Math.round(n).toLocaleString('ja-JP');
+  }
+
+  function formatPct(n) {
+    if (isNaN(n) || n === null) return '';
+    return n.toFixed(2) + '%';
+  }
+
+  // カンマ自動挿入
+  function autoFormat(input) {
+    const raw = input.value.replace(/[^0-9.-]/g, '');
+    const num = parseFloat(raw);
+    if (!isNaN(num) && raw !== '' && raw !== '-') {
+      input.value = formatNum(num);
+    }
+  }
+
+  // 入力イベント：自動計算
+  function setupAutoCalc() {
+    const ids = ['sales', 'material', 'labor', 'overhead'];
+    ids.forEach(id => {
+      const el = document.getElementById(id);
+      el.addEventListener('blur', function() {
+        autoFormat(this);
+        updateSummary();
+      });
+    });
+  }
+
+  function updateSummary() {
+    const sales = parseNum(document.getElementById('sales').value);
+    const material = parseNum(document.getElementById('material').value);
+    const labor = parseNum(document.getElementById('labor').value);
+    const overhead = parseNum(document.getElementById('overhead').value);
+
+    const cogs = material + labor + overhead;
+    const grossProfit = sales - cogs;
+    const grossMargin = sales > 0 ? (grossProfit / sales) * 100 : 0;
+
+    document.getElementById('cogs').value = cogs > 0 ? formatNum(cogs) + ' 円' : '';
+    document.getElementById('currentGrossProfit').value = sales > 0 ? formatNum(grossProfit) + ' 円' : '';
+    document.getElementById('currentGrossMargin').value = sales > 0 ? formatPct(grossMargin) : '';
+  }
+
+  // 目標モード切替
+  function setTargetMode(mode) {
+    targetMode = mode;
+    document.getElementById('modeRate').classList.toggle('active', mode === 'rate');
+    document.getElementById('modeAmount').classList.toggle('active', mode === 'amount');
+    document.getElementById('targetRateGroup').style.display = mode === 'rate' ? 'block' : 'none';
+    document.getElementById('targetAmountGroup').style.display = mode === 'amount' ? 'block' : 'none';
+  }
+
+  // メイン計算
+  function calculate() {
+    const errEl = document.getElementById('errorMsg');
+    errEl.classList.remove('show');
+
+    const sales = parseNum(document.getElementById('sales').value);
+    const material = parseNum(document.getElementById('material').value);
+    const labor = parseNum(document.getElementById('labor').value);
+    const overhead = parseNum(document.getElementById('overhead').value);
+    const cogs = material + labor + overhead;
+
+    // バリデーション
+    if (sales <= 0) {
+      showError('売上高を入力してください。');
+      return;
+    }
+    if (cogs <= 0) {
+      showError('売上原価（材料費・労務費・製造経費）を入力してください。');
+      return;
+    }
+    if (cogs >= sales) {
+      showError('売上原価が売上高以上です。データを確認してください。');
+      return;
+    }
+
+    const currentGP = sales - cogs;
+    const currentGM = (currentGP / sales) * 100;
+
+    let targetGP, targetGM;
+
+    if (targetMode === 'rate') {
+      targetGM = parseNum(document.getElementById('targetRate').value);
+      if (targetGM <= 0 || targetGM >= 100) {
+        showError('目標粗利率は0%～100%の間で入力してください。');
+        return;
+      }
+      if (targetGM <= currentGM) {
+        showError('目標粗利率（' + formatPct(targetGM) + '）が現状粗利率（' + formatPct(currentGM) + '）以下です。値上げの必要はありません。');
+        return;
+      }
+      // 値上げ後売上 = 原価 / (1 - 目標粗利率)
+      const newSales = cogs / (1 - targetGM / 100);
+      targetGP = newSales - cogs;
+    } else {
+      targetGP = parseNum(document.getElementById('targetAmount').value);
+      if (targetGP <= 0) {
+        showError('目標粗利額を入力してください。');
+        return;
+      }
+      if (targetGP <= currentGP) {
+        showError('目標粗利額（' + formatNum(targetGP) + '円）が現状粗利額（' + formatNum(currentGP) + '円）以下です。値上げの必要はありません。');
+        return;
+      }
+    }
+
+    // 値上げ後の数値
+    const newSales = targetGP + cogs;
+    const newGM = (targetGP / newSales) * 100;
+    const increaseRate = ((newSales / sales) - 1) * 100;
+    const salesDiff = newSales - sales;
+    const gpDiff = targetGP - currentGP;
+
+    // 結果表示
+    const resultEl = document.getElementById('resultRate');
+    resultEl.textContent = '+' + formatPct(increaseRate);
+    resultEl.className = 'value positive';
+
+    document.getElementById('resultSub').textContent =
+      '売上を ' + formatNum(salesDiff) + ' 円 増加させる必要があります';
+
+    // 比較テーブル
+    const rows = [
+      { label: '売上高', current: sales, after: newSales, diff: salesDiff, isCurrency: true },
+      { label: '　材料費', current: material, after: material, diff: 0, isCurrency: true, indent: true },
+      { label: '　労務費', current: labor, after: labor, diff: 0, isCurrency: true, indent: true },
+      { label: '　製造経費', current: overhead, after: overhead, diff: 0, isCurrency: true, indent: true },
+      { label: '売上原価 合計', current: cogs, after: cogs, diff: 0, isCurrency: true },
+      { label: '粗利額', current: currentGP, after: targetGP, diff: gpDiff, isCurrency: true, highlight: true },
+      { label: '粗利率', current: currentGM, after: newGM, diff: newGM - currentGM, isCurrency: false, highlight: true },
+    ];
+
+    let tbody = '';
+    rows.forEach(r => {
+      const cls = r.highlight ? ' class="row-highlight"' : '';
+      const diffCls = r.diff > 0 ? 'diff-positive' : (r.diff < 0 ? 'diff-negative' : '');
+
+      let currentStr, afterStr, diffStr;
+      if (r.isCurrency) {
+        currentStr = formatNum(r.current) + ' 円';
+        afterStr = formatNum(r.after) + ' 円';
+        diffStr = (r.diff >= 0 ? '+' : '') + formatNum(r.diff) + ' 円';
+      } else {
+        currentStr = formatPct(r.current);
+        afterStr = formatPct(r.after);
+        diffStr = (r.diff >= 0 ? '+' : '') + formatPct(r.diff);
+      }
+
+      tbody += '<tr' + cls + '>'
+        + '<th>' + r.label + '</th>'
+        + '<td>' + currentStr + '</td>'
+        + '<td>' + afterStr + '</td>'
+        + '<td class="' + diffCls + '">' + diffStr + '</td>'
+        + '</tr>';
+    });
+
+    document.getElementById('comparisonBody').innerHTML = tbody;
+    document.getElementById('resultSection').classList.add('show');
+
+    // スクロール
+    document.getElementById('resultSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function showError(msg) {
+    const errEl = document.getElementById('errorMsg');
+    errEl.textContent = msg;
+    errEl.classList.add('show');
+    document.getElementById('resultSection').classList.remove('show');
+  }
+
+  function resetForm() {
+    document.getElementById('resultSection').classList.remove('show');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // 初期化
+  setupAutoCalc();
+</script>
+
+</body>
+</html>
