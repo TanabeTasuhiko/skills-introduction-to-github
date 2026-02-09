@@ -238,7 +238,7 @@
   <div class="welcome" id="welcome">
     <div class="icon">&#128221;</div>
     <p>PDF または 画像ファイルをドロップ<br>または「ファイルを開く」で選択してください</p>
-    <p class="sub">Google Driveの共有画像はURLから直接読み込めます</p>
+    <p class="sub">Ctrl+V で画像を貼り付け / Google Driveの画像もコピー&ペーストで読み込めます</p>
   </div>
   <div class="canvas-wrapper" id="canvasWrapper" style="display:none">
     <canvas id="bgCanvas"></canvas>
@@ -643,6 +643,29 @@
     toast.classList.add('show');
     setTimeout(() => toast.classList.remove('show'), 2500);
   }
+
+  // ── Clipboard paste (Ctrl+V) ──
+  document.addEventListener('paste', (e) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    for (const item of items) {
+      // Handle pasted image (screenshot, copied image from Drive, etc.)
+      if (item.type.startsWith('image/')) {
+        e.preventDefault();
+        const blob = item.getAsFile();
+        const url = URL.createObjectURL(blob);
+        const img = new Image();
+        img.onload = () => {
+          loadImage(img);
+          URL.revokeObjectURL(url);
+          showToast('貼り付けた画像を読み込みました');
+        };
+        img.src = url;
+        return;
+      }
+    }
+  });
 
   // ── Keyboard shortcuts ──
   document.addEventListener('keydown', (e) => {
