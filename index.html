@@ -1,0 +1,1167 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EOS 収益分析 - Profitability Analytics</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #f5f6fa;
+      color: #333;
+      display: flex;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ===== Sidebar ===== */
+    .sidebar {
+      width: 220px;
+      min-width: 220px;
+      background: #fff;
+      border-right: 1px solid #e8eaf0;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      position: fixed;
+      left: 0;
+      top: 0;
+      z-index: 100;
+    }
+
+    .sidebar-header {
+      padding: 16px;
+      border-bottom: 1px solid #e8eaf0;
+    }
+
+    .sidebar-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 4px;
+    }
+
+    .sidebar-logo-icon {
+      width: 32px;
+      height: 32px;
+      background: #1a1a2e;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    .sidebar-logo-text {
+      font-size: 15px;
+      font-weight: 700;
+      color: #1a1a2e;
+    }
+
+    .sidebar-logo-sub {
+      font-size: 10px;
+      color: #999;
+      margin-left: 42px;
+      margin-top: -2px;
+    }
+
+    .env-badge {
+      display: inline-block;
+      background: #e8f5e9;
+      color: #2e7d32;
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      margin-top: 8px;
+      font-weight: 500;
+    }
+
+    .sidebar-user {
+      padding: 16px;
+      border-bottom: 1px solid #e8eaf0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .user-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #f8a4c8, #a78bfa);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .user-avatar svg {
+      width: 22px;
+      height: 22px;
+      fill: #fff;
+    }
+
+    .user-info {
+      flex: 1;
+    }
+
+    .user-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: #333;
+    }
+
+    .user-badges {
+      display: flex;
+      gap: 4px;
+      margin-top: 3px;
+    }
+
+    .user-badge {
+      font-size: 9px;
+      padding: 1px 6px;
+      border-radius: 3px;
+      font-weight: 600;
+    }
+
+    .user-badge.p {
+      background: #fce4ec;
+      color: #e91e63;
+    }
+
+    .user-badge.sys {
+      background: #e3f2fd;
+      color: #1976d2;
+    }
+
+    .sidebar-nav {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 0;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 16px;
+      font-size: 13px;
+      color: #555;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-decoration: none;
+      border-left: 3px solid transparent;
+    }
+
+    .nav-item:hover {
+      background: #f8f9fc;
+      color: #333;
+    }
+
+    .nav-item.active {
+      background: #f0f4ff;
+      color: #4f46e5;
+      border-left-color: #4f46e5;
+      font-weight: 600;
+    }
+
+    .nav-item svg {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      opacity: 0.6;
+    }
+
+    .nav-item.active svg {
+      opacity: 1;
+    }
+
+    .nav-section {
+      padding: 12px 16px 4px;
+      font-size: 10px;
+      color: #999;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .nav-section svg {
+      width: 14px;
+      height: 14px;
+      color: #bbb;
+    }
+
+    .sidebar-footer {
+      padding: 12px 16px;
+      border-top: 1px solid #e8eaf0;
+      font-size: 11px;
+      color: #999;
+    }
+
+    .sidebar-footer .version {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+
+    .sidebar-footer .version .dev-badge {
+      background: #e8f5e9;
+      color: #2e7d32;
+      padding: 1px 6px;
+      border-radius: 3px;
+      font-size: 10px;
+    }
+
+    .logout-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #999;
+      cursor: pointer;
+      font-size: 12px;
+      padding: 4px 0;
+    }
+
+    .logout-btn:hover {
+      color: #e53e3e;
+    }
+
+    /* ===== Main Content ===== */
+    .main-content {
+      flex: 1;
+      margin-left: 220px;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    /* ===== Top Header ===== */
+    .top-header {
+      background: #1a1a2e;
+      color: #fff;
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .recording-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #fbbf24;
+      color: #1a1a2e;
+      padding: 4px 12px;
+      border-radius: 16px;
+      font-size: 11px;
+      font-weight: 600;
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+
+    .recording-dot {
+      width: 8px;
+      height: 8px;
+      background: #ef4444;
+      border-radius: 50%;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .header-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .header-logo {
+      width: 36px;
+      height: 36px;
+      background: #4f46e5;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 16px;
+    }
+
+    .header-title-text h1 {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    .header-title-text p {
+      font-size: 10px;
+      color: #94a3b8;
+      letter-spacing: 1px;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .header-date {
+      font-size: 13px;
+      color: #cbd5e1;
+    }
+
+    .header-date span {
+      color: #94a3b8;
+      font-size: 11px;
+    }
+
+    .header-bell {
+      width: 20px;
+      height: 20px;
+      color: #94a3b8;
+      cursor: pointer;
+    }
+
+    .header-avatar {
+      width: 32px;
+      height: 32px;
+      background: #6366f1;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    /* ===== Tabs ===== */
+    .tabs-bar {
+      background: #fff;
+      padding: 0 24px;
+      display: flex;
+      gap: 0;
+      border-bottom: 1px solid #e8eaf0;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+
+    .tab-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 14px 20px;
+      font-size: 13px;
+      color: #666;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+
+    .tab-item:hover {
+      color: #333;
+      background: #f8f9fc;
+    }
+
+    .tab-item.active {
+      color: #1a1a2e;
+      font-weight: 600;
+      border-bottom-color: #1a1a2e;
+      background: #f0f1f5;
+      border-radius: 8px 8px 0 0;
+    }
+
+    .tab-item svg {
+      width: 16px;
+      height: 16px;
+      opacity: 0.5;
+    }
+
+    .tab-item.active svg {
+      opacity: 0.8;
+    }
+
+    /* ===== Dashboard Content ===== */
+    .dashboard {
+      padding: 20px 24px;
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    /* KPI Cards */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .kpi-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 18px 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      border: 1px solid #f0f0f5;
+    }
+
+    .kpi-label {
+      font-size: 11px;
+      color: #888;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .kpi-value-row {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+    }
+
+    .kpi-value {
+      font-size: 28px;
+      font-weight: 700;
+      color: #1a1a2e;
+      letter-spacing: -0.5px;
+    }
+
+    .kpi-change {
+      font-size: 12px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .kpi-change.up {
+      color: #10b981;
+    }
+
+    .kpi-change.down {
+      color: #ef4444;
+    }
+
+    .kpi-sub {
+      font-size: 11px;
+      color: #999;
+      margin-top: 2px;
+    }
+
+    .kpi-icon {
+      float: right;
+      font-size: 20px;
+      margin-top: -4px;
+    }
+
+    /* Gap Section */
+    .section-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #1a1a2e;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section-title .icon {
+      font-size: 18px;
+    }
+
+    .gap-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      border: 1px solid #f0f0f5;
+      margin-bottom: 20px;
+    }
+
+    .gap-grid {
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+    }
+
+    .gap-item {
+      text-align: center;
+    }
+
+    .gap-circle {
+      width: 130px;
+      height: 130px;
+      position: relative;
+      margin: 0 auto 10px;
+    }
+
+    .gap-circle svg {
+      transform: rotate(-90deg);
+      width: 130px;
+      height: 130px;
+    }
+
+    .gap-circle-bg {
+      fill: none;
+      stroke: #f0f0f5;
+      stroke-width: 8;
+    }
+
+    .gap-circle-fill {
+      fill: none;
+      stroke-width: 8;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 1s ease;
+    }
+
+    .gap-circle-value {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 22px;
+      font-weight: 700;
+    }
+
+    .gap-label {
+      font-size: 13px;
+      color: #555;
+      font-weight: 500;
+    }
+
+    .gap-target {
+      font-size: 10px;
+      color: #aaa;
+      margin-top: 2px;
+    }
+
+    /* Bottom Grid */
+    .bottom-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .chart-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      border: 1px solid #f0f0f5;
+    }
+
+    .chart-card .section-title {
+      margin-bottom: 12px;
+    }
+
+    .chart-legend {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 12px;
+    }
+
+    .chart-legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: #777;
+    }
+
+    .chart-legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    .chart-container {
+      position: relative;
+      height: 200px;
+    }
+
+    /* Annual Budget */
+    .budget-list {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .budget-item {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .budget-label {
+      width: 70px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #333;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .budget-bar-wrap {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .budget-bar-outer {
+      width: 100%;
+      height: 22px;
+      background: #f0f0f5;
+      border-radius: 6px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .budget-bar-inner {
+      height: 100%;
+      border-radius: 6px;
+      transition: width 1s ease;
+    }
+
+    .budget-bar-inner.revenue {
+      background: linear-gradient(90deg, #f87171, #fb923c);
+    }
+
+    .budget-bar-inner.labor {
+      background: linear-gradient(90deg, #34d399, #6ee7b7);
+    }
+
+    .budget-bar-inner.cost {
+      background: linear-gradient(90deg, #fbbf24, #fcd34d);
+    }
+
+    .budget-bar-inner.admin {
+      background: linear-gradient(90deg, #6b7280, #9ca3af);
+    }
+
+    .budget-details {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      color: #999;
+    }
+
+    .budget-pct {
+      font-size: 14px;
+      font-weight: 700;
+      width: 42px;
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    .budget-pct.revenue { color: #f87171; }
+    .budget-pct.labor { color: #34d399; }
+    .budget-pct.cost { color: #fbbf24; }
+    .budget-pct.admin { color: #6b7280; }
+
+    /* Debug Button */
+    .debug-btn {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #1a1a2e;
+      color: #fff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 24px;
+      font-size: 13px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      z-index: 200;
+    }
+
+    .debug-btn:hover {
+      background: #2d2d4a;
+    }
+
+    .debug-btn svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #ddd;
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <div class="sidebar-logo-icon">E</div>
+        <div class="sidebar-logo-text">EOS Admin</div>
+      </div>
+      <div class="sidebar-logo-sub">システム管理コンソール</div>
+      <div class="env-badge">開発環境</div>
+    </div>
+
+    <div class="sidebar-user">
+      <div class="user-avatar">
+        <svg viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+      </div>
+      <div class="user-info">
+        <div class="user-name">あべき 光司</div>
+        <div class="user-badges">
+          <span class="user-badge p">P</span>
+          <span class="user-badge sys">SYS</span>
+        </div>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a class="nav-item" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        ダッシュボード
+      </a>
+      <a class="nav-item" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        フォロー
+      </a>
+      <a class="nav-item" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        コミットメントシート
+      </a>
+      <a class="nav-item" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        月報
+      </a>
+      <a class="nav-item" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+        経営計画書
+      </a>
+      <a class="nav-item" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        ミーティング
+      </a>
+      <a class="nav-item" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        360度FB
+      </a>
+      <a class="nav-item" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        個人設定
+      </a>
+
+      <div class="nav-section">
+        管理
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+
+      <a class="nav-item active" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        予算管理
+      </a>
+      <a class="nav-item" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>
+        マスター管理
+      </a>
+      <a class="nav-item" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33"/></svg>
+        テナント設定
+      </a>
+
+      <div class="nav-section">
+        システム管理
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="version">
+        v0.53.0 <span class="dev-badge">開発</span>
+      </div>
+      <div class="logout-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        ログアウト
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <!-- Top Header -->
+    <header class="top-header" style="position: relative;">
+      <div class="header-left">
+        <div class="header-title">
+          <div class="header-logo">E</div>
+          <div class="header-title-text">
+            <h1>EOS 収益分析</h1>
+            <p>Profitability Analytics</p>
+          </div>
+        </div>
+      </div>
+      <div class="recording-badge">
+        <div class="recording-dot"></div>
+        操作ログ記録中
+      </div>
+      <div class="header-right">
+        <div class="header-date">
+          <span>月度選択</span>&nbsp; 2026年 2月度
+        </div>
+        <svg class="header-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <div class="header-avatar">KJ</div>
+      </div>
+    </header>
+
+    <!-- Tabs -->
+    <div class="tabs-bar">
+      <div class="tab-item active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        ダッシュボード
+      </div>
+      <div class="tab-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        クライアント分析
+      </div>
+      <div class="tab-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        スタッフ・チーム
+      </div>
+      <div class="tab-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        シミュレーション
+      </div>
+      <div class="tab-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10H12V2z"/><path d="M20 12a8 8 0 0 0-8-8v8h8z" fill="currentColor" opacity="0.3"/></svg>
+        AI分析・承認
+      </div>
+    </div>
+
+    <!-- Dashboard Content -->
+    <div class="dashboard">
+      <!-- KPI Cards -->
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-label">月間売上 <span class="kpi-icon">🔥</span></div>
+          <div class="kpi-value-row">
+            <span class="kpi-value">¥790,000</span>
+            <span class="kpi-change up">↑3.2%</span>
+          </div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-label">平均利益率</div>
+          <div class="kpi-value-row">
+            <span class="kpi-value" style="color:#10b981;">19.6%</span>
+            <span class="kpi-change up">↑2.1%</span>
+          </div>
+          <div class="kpi-sub">目標:60.0%</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-label">平均時間単価</div>
+          <div class="kpi-value-row">
+            <span class="kpi-value">¥5,097</span>
+            <span class="kpi-change down">↓4.3%</span>
+          </div>
+          <div class="kpi-sub">/時間</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-label">クライアント数</div>
+          <div class="kpi-value-row">
+            <span class="kpi-value">8社</span>
+          </div>
+          <div class="kpi-sub">要改善:7社</div>
+        </div>
+      </div>
+
+      <!-- Target Gap -->
+      <div class="gap-card">
+        <div class="section-title">
+          <span class="icon">🎯</span>
+          目標利益率とのギャップ
+        </div>
+        <div class="gap-grid">
+          <div class="gap-item">
+            <div class="gap-circle" id="gap-overall">
+              <svg viewBox="0 0 120 120">
+                <circle class="gap-circle-bg" cx="60" cy="60" r="50"/>
+                <circle class="gap-circle-fill" cx="60" cy="60" r="50"
+                  stroke="#f87171"
+                  stroke-dasharray="314"
+                  stroke-dashoffset="211"/>
+              </svg>
+              <div class="gap-circle-value" style="color:#f87171;">19.6%</div>
+            </div>
+            <div class="gap-label">全体</div>
+            <div class="gap-target">目標:60.0%</div>
+          </div>
+
+          <div class="gap-item">
+            <div class="gap-circle" id="gap-team1">
+              <svg viewBox="0 0 120 120">
+                <circle class="gap-circle-bg" cx="60" cy="60" r="50"/>
+                <circle class="gap-circle-fill" cx="60" cy="60" r="50"
+                  stroke="#34d399"
+                  stroke-dasharray="314"
+                  stroke-dashoffset="201"/>
+              </svg>
+              <div class="gap-circle-value" style="color:#34d399;">36.0%</div>
+            </div>
+            <div class="gap-label">第1チーム</div>
+            <div class="gap-target">&nbsp;</div>
+          </div>
+
+          <div class="gap-item">
+            <div class="gap-circle" id="gap-team2">
+              <svg viewBox="0 0 120 120">
+                <circle class="gap-circle-bg" cx="60" cy="60" r="50"/>
+                <circle class="gap-circle-fill" cx="60" cy="60" r="50"
+                  stroke="#a78bfa"
+                  stroke-dasharray="314"
+                  stroke-dashoffset="314"/>
+              </svg>
+              <div class="gap-circle-value" style="color:#a78bfa;">-50.7%</div>
+            </div>
+            <div class="gap-label">第2チーム</div>
+            <div class="gap-target">&nbsp;</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom Grid -->
+      <div class="bottom-grid">
+        <!-- Monthly Trend -->
+        <div class="chart-card">
+          <div class="section-title">
+            <span class="icon">📊</span>
+            月次推移
+          </div>
+          <div class="chart-legend">
+            <div class="chart-legend-item">
+              <div class="chart-legend-dot" style="background:#6366f1;"></div>
+              平均利益率
+            </div>
+            <div class="chart-legend-item">
+              <div class="chart-legend-dot" style="background:#34d399;"></div>
+              月間売上
+            </div>
+          </div>
+          <div class="chart-container">
+            <canvas id="monthlyChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Annual Budget -->
+        <div class="chart-card">
+          <div class="section-title">
+            <span class="icon">📈</span>
+            年間予実
+          </div>
+          <div class="budget-list">
+            <div class="budget-item">
+              <div class="budget-label">売上</div>
+              <div class="budget-bar-wrap">
+                <div class="budget-bar-outer">
+                  <div class="budget-bar-inner revenue" style="width: 89%;"></div>
+                </div>
+                <div class="budget-details">
+                  <span>実績¥8,000,000</span>
+                  <span>予算¥10,000,000</span>
+                </div>
+              </div>
+              <div class="budget-pct revenue">89%</div>
+            </div>
+
+            <div class="budget-item">
+              <div class="budget-label">人件費</div>
+              <div class="budget-bar-wrap">
+                <div class="budget-bar-outer">
+                  <div class="budget-bar-inner labor" style="width: 91%;"></div>
+                </div>
+                <div class="budget-details">
+                  <span>実績¥4,310,000</span>
+                  <span>予算¥4,500,000</span>
+                </div>
+              </div>
+              <div class="budget-pct labor">91%</div>
+            </div>
+
+            <div class="budget-item">
+              <div class="budget-label">直接原価</div>
+              <div class="budget-bar-wrap">
+                <div class="budget-bar-outer">
+                  <div class="budget-bar-inner cost" style="width: 85%;"></div>
+                </div>
+                <div class="budget-details">
+                  <span>実績¥680,000</span>
+                  <span>予算¥800,000</span>
+                </div>
+              </div>
+              <div class="budget-pct cost">85%</div>
+            </div>
+
+            <div class="budget-item">
+              <div class="budget-label">管理コスト</div>
+              <div class="budget-bar-wrap">
+                <div class="budget-bar-outer">
+                  <div class="budget-bar-inner admin" style="width: 90%;"></div>
+                </div>
+                <div class="budget-details">
+                  <span>実績¥1,350,000</span>
+                  <span>予算¥1,500,000</span>
+                </div>
+              </div>
+              <div class="budget-pct admin">90%</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Debug Button -->
+  <button class="debug-btn">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="M14.31 8l5.74 9.94M9.69 8h11.48M7.38 12l5.74-9.94M9.69 16L3.95 6.06M14.31 16H2.83M16.62 12l-5.74 9.94"/></svg>
+    デバッグ
+  </button>
+
+  <script>
+    // Monthly Trend Chart
+    const ctx = document.getElementById('monthlyChart').getContext('2d');
+
+    const monthlyChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: ['6月', '7月', '8月', '9月', '10月', '11月', '12月', '1月', '2月'],
+        datasets: [
+          {
+            label: '平均利益率',
+            data: [15, 18, 14, 16, 20, 22, 19, 17, 19.6],
+            borderColor: '#6366f1',
+            backgroundColor: 'rgba(99, 102, 241, 0.08)',
+            fill: true,
+            tension: 0.4,
+            borderWidth: 2.5,
+            pointRadius: 3,
+            pointBackgroundColor: '#6366f1',
+            yAxisID: 'y',
+          },
+          {
+            label: '月間売上',
+            data: [500000, 580000, 520000, 610000, 680000, 720000, 690000, 750000, 790000],
+            borderColor: '#34d399',
+            backgroundColor: 'rgba(52, 211, 153, 0.08)',
+            fill: true,
+            tension: 0.4,
+            borderWidth: 2.5,
+            pointRadius: 3,
+            pointBackgroundColor: '#34d399',
+            yAxisID: 'y1',
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+          mode: 'index',
+          intersect: false,
+        },
+        plugins: {
+          legend: {
+            display: false,
+          },
+          tooltip: {
+            backgroundColor: '#1a1a2e',
+            titleFont: { size: 11 },
+            bodyFont: { size: 11 },
+            padding: 10,
+            cornerRadius: 8,
+          }
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: {
+              font: { size: 10 },
+              color: '#aaa',
+            }
+          },
+          y: {
+            position: 'left',
+            grid: {
+              color: '#f0f0f5',
+            },
+            ticks: {
+              font: { size: 10 },
+              color: '#aaa',
+              callback: function(v) { return v + '%'; }
+            },
+            min: 0,
+            max: 40,
+          },
+          y1: {
+            position: 'right',
+            grid: { display: false },
+            ticks: {
+              font: { size: 10 },
+              color: '#aaa',
+              callback: function(v) {
+                return '¥' + (v/10000).toFixed(0) + '万';
+              }
+            },
+            min: 0,
+            max: 1000000,
+          }
+        }
+      }
+    });
+
+    // Animate budget bars on load
+    window.addEventListener('load', () => {
+      document.querySelectorAll('.budget-bar-inner').forEach(bar => {
+        const width = bar.style.width;
+        bar.style.width = '0%';
+        setTimeout(() => {
+          bar.style.width = width;
+        }, 300);
+      });
+    });
+  </script>
+</body>
+</html>
