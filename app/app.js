@@ -15,6 +15,15 @@
     stream: null,       // MediaStream
     autoTimer: null,
     nextId: 1,
+    // Page-turn detection
+    detectActive: false,
+    detectRAF: null,
+    detectPrevFrame: null,   // ImageData (downscaled)
+    detectCooldownUntil: 0,
+    detectCount: 0,
+    detectPhase: 'idle',     // idle | change_detected | settling
+    detectSettleStart: 0,
+    monitorVisible: false,
   };
 
   // ─── DOM refs ───────────────────────────────────────────
@@ -40,6 +49,26 @@
   const imageQualitySelect = $('#image-quality');
   const autoCaptureCheck   = $('#auto-capture');
   const autoIntervalInput  = $('#auto-interval');
+  // Page-turn detection
+  const pageDetectCheck    = $('#page-detect');
+  const detectSensitivity  = $('#detect-sensitivity');
+  const detectSensVal      = $('#detect-sensitivity-val');
+  const detectSettle       = $('#detect-settle');
+  const detectCooldown     = $('#detect-cooldown');
+  const detectRegion       = $('#detect-region');
+  const btnDetectPreview   = $('#btn-detect-preview');
+  const detectStatusBadge  = $('#detect-status-badge');
+  const detectMonitor      = $('#detect-monitor');
+  const btnCloseMonitor    = $('#btn-close-monitor');
+  const detectCanvas       = $('#detect-canvas');
+  const monitorPrevCanvas  = $('#monitor-prev');
+  const monitorDiffCanvas  = $('#monitor-diff');
+  const monitorDiffPct     = $('#monitor-diff-pct');
+  const monitorThreshold   = $('#monitor-threshold');
+  const monitorState       = $('#monitor-state');
+  const monitorCountEl     = $('#monitor-count');
+  const monitorDiffBar     = $('#monitor-diff-bar');
+  const monitorThreshLine  = $('#monitor-threshold-line');
 
   // ─── Screen Capture ─────────────────────────────────────
   async function startCapture() {
@@ -66,6 +95,10 @@
       if (autoCaptureCheck.checked) {
         startAutoCapture();
       }
+      // Start page-turn detection if checked
+      if (pageDetectCheck.checked) {
+        startDetection();
+      }
     } catch (err) {
       if (err.name !== 'AbortError') {
         setStatus('キャプチャ開始に失敗: ' + err.message);
@@ -84,6 +117,7 @@
     btnStopCapture.disabled = true;
     captureStatus.classList.add('hidden');
     stopAutoCapture();
+    stopDetection();
     setStatus('キャプチャ停止');
   }
 
@@ -134,6 +168,217 @@
     if (autoCaptureCheck.checked && state.stream) {
       startAutoCapture();
     }
+  });
+
+  // ─── Page-Turn Detection ───────────────────────────────
+  const DETECT_SCALE = 160; // Downscale width for comparison (perf)
+
+  function startDetection() {
+    if (!state.stream) return;
+    state.detectActive = true;
+    state.detectPrevFrame = null;
+    state.detectCount = 0;
+    state.detectPhase = 'idle';
+    state.detectCooldownUntil = 0;
+    detectStatusBadge.classList.remove('hidden');
+    detectStatusBadge.classList.add('active');
+    detectStatusBadge.textContent = '検知ON';
+    btnDetectPreview.disabled = false;
+    setStatus('ページめくり検知: ON — 電子書籍のページをめくると自動撮影します');
+    detectLoop();
+  }
+
+  function stopDetection() {
+    state.detectActive = false;
+    if (state.detectRAF) {
+      cancelAnimationFrame(state.detectRAF);
+      state.detectRAF = null;
+    }
+    state.detectPrevFrame = null;
+    detectStatusBadge.classList.add('hidden');
+    detectStatusBadge.classList.remove('active');
+    btnDetectPreview.disabled = true;
+  }
+
+  function detectLoop() {
+    if (!state.detectActive || !state.stream) return;
+
+    state.detectRAF = requestAnimationFrame(() => {
+      processDetectionFrame();
+      // Run at ~10fps for efficiency
+      setTimeout(() => detectLoop(), 100);
+    });
+  }
+
+  function processDetectionFrame() {
+    if (!state.stream) return;
+    const track = state.stream.getVideoTracks()[0];
+    if (!track) return;
+    const settings = track.getSettings();
+    const srcW = settings.width;
+    const srcH = settings.height;
+    if (!srcW || !srcH) return;
+
+    // Downscale for comparison
+    const scale = DETECT_SCALE / srcW;
+    const dw = DETECT_SCALE;
+    const dh = Math.round(srcH * scale);
+
+    detectCanvas.width = dw;
+    detectCanvas.height = dh;
+    const ctx = detectCanvas.getContext('2d', { willReadFrequently: true });
+
+    // Determine detection region
+    const region = detectRegion.value;
+    let sx = 0, sy = 0, sw = srcW, sh = srcH;
+    if (region === 'center') {
+      // Center 60%
+      const marginX = srcW * 0.2;
+      const marginY = srcH * 0.2;
+      sx = marginX;
+      sy = marginY;
+      sw = srcW * 0.6;
+      sh = srcH * 0.6;
+    }
+
+    ctx.drawImage(videoPreview, sx, sy, sw, sh, 0, 0, dw, dh);
+    const currentFrame = ctx.getImageData(0, 0, dw, dh);
+
+    const now = performance.now();
+    const threshold = parseInt(detectSensitivity.value, 10) / 100;
+    const settleMs = parseInt(detectSettle.value, 10) || 500;
+    const cooldownMs = parseInt(detectCooldown.value, 10) || 1000;
+
+    if (state.detectPrevFrame) {
+      const diff = computeFrameDiff(state.detectPrevFrame, currentFrame);
+
+      // Update monitor if visible
+      if (state.monitorVisible) {
+        updateMonitor(state.detectPrevFrame, currentFrame, diff, dw, dh);
+      }
+
+      // State machine for detection
+      switch (state.detectPhase) {
+        case 'idle':
+          if (diff > threshold && now > state.detectCooldownUntil) {
+            // Big change detected — page might be turning
+            state.detectPhase = 'change_detected';
+            state.detectSettleStart = now;
+            updateDetectMonitorState('変化検出...');
+          }
+          break;
+
+        case 'change_detected':
+          if (diff > threshold * 0.3) {
+            // Still changing (animation in progress), reset settle timer
+            state.detectSettleStart = now;
+          }
+          if (now - state.detectSettleStart > settleMs) {
+            // Page has settled — capture!
+            state.detectPhase = 'idle';
+            state.detectCooldownUntil = now + cooldownMs;
+            state.detectCount++;
+            takeScreenshot();
+            updateDetectMonitorState('撮影完了!');
+            if (monitorCountEl) monitorCountEl.textContent = state.detectCount;
+            setStatus(`ページめくり検知: #${state.detectCount} 自動撮影 (${state.screenshots.length}ページ目)`);
+            // After capture, mark current frame as new baseline
+            state.detectPrevFrame = currentFrame;
+            return;
+          }
+          break;
+      }
+    }
+
+    state.detectPrevFrame = currentFrame;
+  }
+
+  function computeFrameDiff(prev, curr) {
+    const len = prev.data.length;
+    let totalDiff = 0;
+    let pixelCount = 0;
+    // Sample every 4th pixel for performance
+    for (let i = 0; i < len; i += 16) {
+      const dr = Math.abs(prev.data[i] - curr.data[i]);
+      const dg = Math.abs(prev.data[i + 1] - curr.data[i + 1]);
+      const db = Math.abs(prev.data[i + 2] - curr.data[i + 2]);
+      // A pixel is "changed" if average channel diff > 30
+      if ((dr + dg + db) / 3 > 30) {
+        totalDiff++;
+      }
+      pixelCount++;
+    }
+    return totalDiff / pixelCount; // ratio 0..1
+  }
+
+  function updateMonitor(prevFrame, currFrame, diff, dw, dh) {
+    // Draw previous frame
+    const prevCtx = monitorPrevCanvas.getContext('2d');
+    monitorPrevCanvas.width = dw;
+    monitorPrevCanvas.height = dh;
+    prevCtx.putImageData(prevFrame, 0, 0);
+
+    // Draw diff heatmap
+    const diffCtx = monitorDiffCanvas.getContext('2d');
+    monitorDiffCanvas.width = dw;
+    monitorDiffCanvas.height = dh;
+    const diffImg = diffCtx.createImageData(dw, dh);
+    for (let i = 0; i < prevFrame.data.length; i += 4) {
+      const dr = Math.abs(prevFrame.data[i] - currFrame.data[i]);
+      const dg = Math.abs(prevFrame.data[i + 1] - currFrame.data[i + 1]);
+      const db = Math.abs(prevFrame.data[i + 2] - currFrame.data[i + 2]);
+      const avg = (dr + dg + db) / 3;
+      // Heatmap: green(low) → yellow(mid) → red(high)
+      const intensity = Math.min(avg * 4, 255);
+      diffImg.data[i] = intensity;                          // R
+      diffImg.data[i + 1] = Math.max(0, 255 - intensity);  // G
+      diffImg.data[i + 2] = 0;                              // B
+      diffImg.data[i + 3] = Math.max(intensity, 40);        // A
+    }
+    diffCtx.putImageData(diffImg, 0, 0);
+
+    // Update text
+    const pct = (diff * 100).toFixed(1);
+    const thresholdVal = parseInt(detectSensitivity.value, 10);
+    monitorDiffPct.textContent = pct + '%';
+    monitorThreshold.textContent = thresholdVal + '%';
+    monitorDiffBar.style.width = Math.min(parseFloat(pct), 100) + '%';
+    monitorThreshLine.style.left = thresholdVal + '%';
+    monitorCountEl.textContent = state.detectCount;
+
+    // Color the percentage based on threshold
+    if (diff * 100 > thresholdVal) {
+      monitorDiffPct.style.color = '#e94560';
+    } else {
+      monitorDiffPct.style.color = '#7ec8e3';
+    }
+  }
+
+  function updateDetectMonitorState(text) {
+    if (monitorState) monitorState.textContent = text;
+  }
+
+  // Detection UI events
+  pageDetectCheck.addEventListener('change', () => {
+    if (pageDetectCheck.checked && state.stream) {
+      startDetection();
+    } else {
+      stopDetection();
+    }
+  });
+
+  detectSensitivity.addEventListener('input', () => {
+    detectSensVal.textContent = detectSensitivity.value;
+  });
+
+  btnDetectPreview.addEventListener('click', () => {
+    state.monitorVisible = !state.monitorVisible;
+    detectMonitor.classList.toggle('hidden', !state.monitorVisible);
+  });
+
+  btnCloseMonitor.addEventListener('click', () => {
+    state.monitorVisible = false;
+    detectMonitor.classList.add('hidden');
   });
 
   // ─── Screenshot Management ─────────────────────────────

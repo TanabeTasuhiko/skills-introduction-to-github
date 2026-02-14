@@ -424,6 +424,130 @@ header h1 {
   margin-top: 12px;
 }
 
+/* Detection settings bar */
+.detection-bar {
+  background: #0e0e24;
+  border-bottom: 1px solid #e9456040;
+}
+
+.detection-toggle strong {
+  color: #e0e0e0;
+}
+
+.detect-badge {
+  font-size: 0.75rem;
+  padding: 2px 10px;
+}
+
+.detect-badge.active {
+  background: #27ae60;
+  color: #fff;
+  animation: pulse 1.5s infinite;
+}
+
+.detect-badge.hidden {
+  display: none;
+}
+
+/* Detection monitor */
+.detect-monitor {
+  position: fixed;
+  bottom: 40px;
+  right: 16px;
+  background: #16213e;
+  border: 1px solid #e94560;
+  border-radius: 10px;
+  z-index: 1500;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  overflow: hidden;
+  width: 400px;
+}
+
+.detect-monitor.hidden {
+  display: none;
+}
+
+.detect-monitor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: #0f3460;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.detect-monitor-body {
+  padding: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.monitor-panel {
+  flex: 1;
+  min-width: 150px;
+}
+
+.monitor-label {
+  font-size: 0.7rem;
+  color: #7ec8e3;
+  margin-bottom: 4px;
+  text-align: center;
+}
+
+.monitor-panel canvas {
+  width: 100%;
+  height: auto;
+  border: 1px solid #2a2a4a;
+  border-radius: 4px;
+  background: #000;
+}
+
+.monitor-info {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  font-size: 0.8rem;
+  color: #a0a0b0;
+  padding-top: 6px;
+  border-top: 1px solid #2a2a4a;
+}
+
+.monitor-value {
+  color: #7ec8e3;
+  font-weight: 600;
+}
+
+.diff-bar-container {
+  width: 100%;
+  height: 12px;
+  background: #1a1a2e;
+  border-radius: 6px;
+  position: relative;
+  overflow: visible;
+  margin-top: 2px;
+}
+
+.diff-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #27ae60, #f1c40f, #e94560);
+  border-radius: 6px;
+  transition: width 0.15s;
+  width: 0%;
+}
+
+.threshold-line {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 2px;
+  background: #fff;
+  border-radius: 1px;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .toolbar {
