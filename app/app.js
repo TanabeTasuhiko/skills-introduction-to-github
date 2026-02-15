@@ -668,6 +668,21 @@
   async function exportPDF() {
     if (state.screenshots.length === 0) return;
 
+    // Ensure jsPDF is loaded
+    if (!window.jspdf) {
+      setStatus('PDFライブラリを読み込み中...');
+      try {
+        await loadScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js');
+      } catch (_) {
+        try {
+          await loadScript('https://unpkg.com/jspdf@2.5.2/dist/jspdf.umd.min.js');
+        } catch (_2) {
+          setStatus('エラー: PDFライブラリの読み込みに失敗しました。ネットワーク接続を確認してください。');
+          return;
+        }
+      }
+    }
+
     const { jsPDF } = window.jspdf;
     const pageSizeVal = pageSizeSelect.value;
     const fitMode = imageFitSelect.value;
@@ -763,7 +778,8 @@
         }
         // 'stretch' uses full page by default (drawX=0, drawY=0, drawW=pageW, drawH=pageH)
 
-        pdf.addImage(ss.dataUrl, 'JPEG', drawX, drawY, drawW, drawH);
+        const imgFormat = ss.dataUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG';
+        pdf.addImage(ss.dataUrl, imgFormat, drawX, drawY, drawW, drawH);
 
         // Yield to keep UI responsive
         if (i % 10 === 0) await sleep(0);
@@ -787,6 +803,16 @@
 
   function sleep(ms) {
     return new Promise((r) => setTimeout(r, ms));
+  }
+
+  function loadScript(url) {
+    return new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = url;
+      s.onload = resolve;
+      s.onerror = reject;
+      document.head.appendChild(s);
+    });
   }
 
   function formatTimestamp(d) {
