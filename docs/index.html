@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>連続スクショ PDF Maker</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1>連続スクショ PDF Maker</h1>
+      <p class="subtitle">画面をキャプチャして、まとめて1つのPDFに出力</p>
+    </header>
+
+    <div class="toolbar">
+      <div class="toolbar-left">
+        <button id="btn-start-capture" class="btn btn-primary">
+          <span class="icon">📷</span> 画面キャプチャ開始
+        </button>
+        <button id="btn-take-screenshot" class="btn btn-accent" disabled>
+          <span class="icon">📸</span> スクショ撮影
+          <kbd>Space</kbd>
+        </button>
+        <button id="btn-stop-capture" class="btn btn-secondary" disabled>
+          <span class="icon">⏹</span> キャプチャ停止
+        </button>
+        <span class="divider"></span>
+        <button id="btn-paste-image" class="btn btn-secondary">
+          <span class="icon">📋</span> 画像を貼り付け
+          <kbd>Ctrl+V</kbd>
+        </button>
+        <button id="btn-load-files" class="btn btn-secondary">
+          <span class="icon">📁</span> ファイルから追加
+        </button>
+        <input type="file" id="file-input" accept="image/*" multiple hidden>
+      </div>
+      <div class="toolbar-right">
+        <span id="page-count" class="badge">0 ページ</span>
+        <button id="btn-clear-all" class="btn btn-danger" disabled>
+          <span class="icon">🗑</span> 全削除
+        </button>
+        <button id="btn-export-pdf" class="btn btn-success" disabled>
+          <span class="icon">📄</span> PDF出力
+        </button>
+      </div>
+    </div>
+
+    <div class="settings-bar">
+      <label>
+        PDF用紙サイズ:
+        <select id="page-size">
+          <option value="a4">A4</option>
+          <option value="a3">A3</option>
+          <option value="letter">Letter</option>
+          <option value="fit" selected>画像に合わせる</option>
+        </select>
+      </label>
+      <label>
+        画像配置:
+        <select id="image-fit">
+          <option value="contain" selected>余白あり（全体表示）</option>
+          <option value="cover">余白なし（トリミング）</option>
+          <option value="stretch">引き伸ばし</option>
+        </select>
+      </label>
+      <label>
+        画質:
+        <select id="image-quality">
+          <option value="0.5">低（ファイルサイズ小）</option>
+          <option value="0.75">中</option>
+          <option value="0.92" selected>高</option>
+          <option value="1.0">最高</option>
+        </select>
+      </label>
+      <label>
+        <input type="checkbox" id="auto-capture" />
+        自動キャプチャ（間隔:
+        <input type="number" id="auto-interval" value="3" min="1" max="60" style="width:50px">
+        秒）
+      </label>
+    </div>
+
+    <!-- Page-turn detection settings -->
+    <div class="settings-bar detection-bar">
+      <label class="detection-toggle">
+        <input type="checkbox" id="page-detect" />
+        <strong>ページめくり自動検知</strong>
+      </label>
+      <label>
+        感度:
+        <input type="range" id="detect-sensitivity" min="1" max="50" value="8" style="width:100px">
+        <span id="detect-sensitivity-val">8</span>%
+      </label>
+      <label>
+        安定待ち:
+        <input type="number" id="detect-settle" value="500" min="100" max="3000" step="100" style="width:70px">
+        ms
+      </label>
+      <label>
+        クールダウン:
+        <input type="number" id="detect-cooldown" value="1000" min="200" max="10000" step="100" style="width:70px">
+        ms
+      </label>
+      <label>
+        検知エリア:
+        <select id="detect-region">
+          <option value="full">全体</option>
+          <option value="center" selected>中央60%</option>
+          <option value="custom">カスタム</option>
+        </select>
+      </label>
+      <button id="btn-detect-preview" class="btn btn-secondary btn-small" disabled>
+        <span class="icon">👁</span> 検知モニタ
+      </button>
+      <span id="detect-status-badge" class="badge detect-badge hidden">検知OFF</span>
+    </div>
+
+    <!-- Detection monitor overlay -->
+    <div id="detect-monitor" class="detect-monitor hidden">
+      <div class="detect-monitor-header">
+        <span>ページめくり検知モニタ</span>
+        <button id="btn-close-monitor" class="btn btn-small btn-secondary">閉じる</button>
+      </div>
+      <div class="detect-monitor-body">
+        <div class="monitor-panel">
+          <div class="monitor-label">前フレーム</div>
+          <canvas id="monitor-prev" width="320" height="180"></canvas>
+        </div>
+        <div class="monitor-panel">
+          <div class="monitor-label">差分ヒートマップ</div>
+          <canvas id="monitor-diff" width="320" height="180"></canvas>
+        </div>
+        <div class="monitor-info">
+          <div>変化量: <span id="monitor-diff-pct" class="monitor-value">0.0%</span></div>
+          <div>しきい値: <span id="monitor-threshold" class="monitor-value">8%</span></div>
+          <div>状態: <span id="monitor-state" class="monitor-value">待機中</span></div>
+          <div>検知回数: <span id="monitor-count" class="monitor-value">0</span></div>
+          <div class="diff-bar-container">
+            <div id="monitor-diff-bar" class="diff-bar"></div>
+            <div id="monitor-threshold-line" class="threshold-line" style="left:8%"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Video preview (hidden, used for capture) -->
+    <video id="video-preview" autoplay playsinline style="display:none;"></video>
+    <canvas id="capture-canvas" style="display:none;"></canvas>
+    <canvas id="detect-canvas" style="display:none;"></canvas>
+
+    <!-- Drop zone overlay -->
+    <div id="drop-overlay" class="drop-overlay hidden">
+      <div class="drop-message">ここに画像をドロップ</div>
+    </div>
+
+    <!-- Screenshot gallery -->
+    <div id="gallery" class="gallery">
+      <div id="empty-state" class="empty-state">
+        <div class="empty-icon">📷</div>
+        <p>「画面キャプチャ開始」で画面共有を開始し、<br>
+          「スクショ撮影」またはSpaceキーで連続キャプチャできます。</p>
+        <p class="hint">画像ファイルのドラッグ&ドロップや、クリップボードからの貼り付けにも対応</p>
+      </div>
+    </div>
+
+    <!-- Status bar -->
+    <footer class="status-bar">
+      <span id="status-text">待機中</span>
+      <span id="capture-status" class="capture-indicator hidden">
+        <span class="recording-dot"></span> キャプチャ中
+      </span>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
