@@ -1018,9 +1018,15 @@
   // Keyboard shortcuts
   document.addEventListener('keydown', (e) => {
     // Space = take screenshot (when capturing)
-    if (e.code === 'Space' && state.stream && !e.target.matches('input, select, textarea')) {
+    // Only block Space in actual text inputs, not checkboxes/range/number/select
+    if (e.code === 'Space' && state.stream && e.target.tagName !== 'TEXTAREA') {
       e.preventDefault();
-      takeScreenshot();
+      if (state.snipRegion) {
+        takeSnipScreenshot();
+        setStatus(`スクショ #${state.screenshots.length} を撮影しました（範囲切り取り）`);
+      } else {
+        takeScreenshot();
+      }
     }
     // Escape = close snip overlay or lightbox
     if (e.code === 'Escape') {
