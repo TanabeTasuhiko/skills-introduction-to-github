@@ -18,7 +18,8 @@
     // Page-turn detection
     detectActive: false,
     detectRAF: null,
-    detectPrevFrame: null,   // ImageData (downscaled)
+    detectPrevFrame: null,   // ImageData (downscaled) — consecutive comparison
+    detectBaseFrame: null,   // ImageData (downscaled) — stable baseline
     detectCooldownUntil: 0,
     detectCount: 0,
     detectPhase: 'idle',     // idle | change_detected | settling
@@ -209,6 +210,7 @@
     if (!state.stream) return;
     state.detectActive = true;
     state.detectPrevFrame = null;
+    state.detectBaseFrame = null;
     state.detectCount = 0;
     state.detectPhase = 'idle';
     state.detectCooldownUntil = 0;
@@ -227,6 +229,7 @@
       state.detectRAF = null;
     }
     state.detectPrevFrame = null;
+    state.detectBaseFrame = null;
     detectStatusBadge.classList.add('hidden');
     detectStatusBadge.classList.remove('active');
     btnDetectPreview.disabled = true;
@@ -282,54 +285,67 @@
     ctx.drawImage(videoPreview, sx, sy, sw, sh, 0, 0, dw, dh);
     const currentFrame = ctx.getImageData(0, 0, dw, dh);
 
+    // First frame — set both baselines and return
+    if (!state.detectBaseFrame) {
+      state.detectBaseFrame = currentFrame;
+      state.detectPrevFrame = currentFrame;
+      return;
+    }
+
     const now = performance.now();
     const threshold = parseInt(detectSensitivity.value, 10) / 100;
     const settleMs = parseInt(detectSettle.value, 10) || 500;
     const cooldownMs = parseInt(detectCooldown.value, 10) || 1000;
 
-    if (state.detectPrevFrame) {
-      const diff = computeFrameDiff(state.detectPrevFrame, currentFrame);
+    // baseDiff: compare against stable baseline (detects accumulated change)
+    const baseDiff = computeFrameDiff(state.detectBaseFrame, currentFrame);
+    // frameDiff: compare consecutive frames (detects if still animating)
+    const frameDiff = computeFrameDiff(state.detectPrevFrame, currentFrame);
 
-      // Update monitor if visible
-      if (state.monitorVisible) {
-        updateMonitor(state.detectPrevFrame, currentFrame, diff, dw, dh);
-      }
+    // Update monitor if visible
+    if (state.monitorVisible) {
+      updateMonitor(state.detectBaseFrame, currentFrame, baseDiff, dw, dh);
+    }
 
-      // State machine for detection
-      switch (state.detectPhase) {
-        case 'idle':
-          if (diff > threshold && now > state.detectCooldownUntil) {
-            // Big change detected — page might be turning
-            state.detectPhase = 'change_detected';
-            state.detectSettleStart = now;
-            updateDetectMonitorState('変化検出...');
-          }
-          break;
+    // State machine for detection
+    switch (state.detectPhase) {
+      case 'idle':
+        if (baseDiff > threshold && now > state.detectCooldownUntil) {
+          // Significant change vs stable baseline — page might be turning
+          state.detectPhase = 'change_detected';
+          state.detectSettleStart = now;
+          updateDetectMonitorState('変化検出...');
+        }
+        // Keep baseline fresh when screen is stable (drift/noise < 0.5%)
+        if (baseDiff < 0.005) {
+          state.detectBaseFrame = currentFrame;
+        }
+        break;
 
-        case 'change_detected':
-          if (diff > threshold * 0.3) {
-            // Still changing (animation in progress), reset settle timer
-            state.detectSettleStart = now;
+      case 'change_detected':
+        if (frameDiff > threshold * 0.15) {
+          // Still changing between consecutive frames (animation in progress)
+          state.detectSettleStart = now;
+        }
+        if (now - state.detectSettleStart > settleMs) {
+          // Page has settled — capture!
+          state.detectPhase = 'idle';
+          state.detectCooldownUntil = now + cooldownMs;
+          state.detectCount++;
+          if (state.snipRegion) {
+            takeSnipScreenshot();
+          } else {
+            takeScreenshot();
           }
-          if (now - state.detectSettleStart > settleMs) {
-            // Page has settled — capture!
-            state.detectPhase = 'idle';
-            state.detectCooldownUntil = now + cooldownMs;
-            state.detectCount++;
-            if (state.snipRegion) {
-              takeSnipScreenshot();
-            } else {
-              takeScreenshot();
-            }
-            updateDetectMonitorState('撮影完了!');
-            if (monitorCountEl) monitorCountEl.textContent = state.detectCount;
-            setStatus(`ページめくり検知: #${state.detectCount} 自動撮影 (${state.screenshots.length}ページ目)`);
-            // After capture, mark current frame as new baseline
-            state.detectPrevFrame = currentFrame;
-            return;
-          }
-          break;
-      }
+          updateDetectMonitorState('撮影完了!');
+          if (monitorCountEl) monitorCountEl.textContent = state.detectCount;
+          setStatus(`ページめくり検知: #${state.detectCount} 自動撮影 (${state.screenshots.length}ページ目)`);
+          // Set new baseline to captured page
+          state.detectBaseFrame = currentFrame;
+          state.detectPrevFrame = currentFrame;
+          return;
+        }
+        break;
     }
 
     state.detectPrevFrame = currentFrame;

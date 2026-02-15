@@ -93,12 +93,12 @@
       </label>
       <label>
         感度:
-        <input type="range" id="detect-sensitivity" min="1" max="50" value="8" style="width:100px">
-        <span id="detect-sensitivity-val">8</span>%
+        <input type="range" id="detect-sensitivity" min="1" max="50" value="3" style="width:100px">
+        <span id="detect-sensitivity-val">3</span>%
       </label>
       <label>
         安定待ち:
-        <input type="number" id="detect-settle" value="500" min="100" max="3000" step="100" style="width:70px">
+        <input type="number" id="detect-settle" value="300" min="100" max="3000" step="100" style="width:70px">
         ms
       </label>
       <label>
@@ -137,12 +137,12 @@
         </div>
         <div class="monitor-info">
           <div>変化量: <span id="monitor-diff-pct" class="monitor-value">0.0%</span></div>
-          <div>しきい値: <span id="monitor-threshold" class="monitor-value">8%</span></div>
+          <div>しきい値: <span id="monitor-threshold" class="monitor-value">3%</span></div>
           <div>状態: <span id="monitor-state" class="monitor-value">待機中</span></div>
           <div>検知回数: <span id="monitor-count" class="monitor-value">0</span></div>
           <div class="diff-bar-container">
             <div id="monitor-diff-bar" class="diff-bar"></div>
-            <div id="monitor-threshold-line" class="threshold-line" style="left:8%"></div>
+            <div id="monitor-threshold-line" class="threshold-line" style="left:3%"></div>
           </div>
         </div>
       </div>
