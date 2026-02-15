@@ -24,6 +24,8 @@
     detectPhase: 'idle',     // idle | change_detected | settling
     detectSettleStart: 0,
     monitorVisible: false,
+    // Snip region for detection (source video pixel coords)
+    snipRegion: null,  // { x, y, w, h }
   };
 
   // ─── DOM refs ───────────────────────────────────────────
@@ -120,6 +122,11 @@
     captureStatus.classList.add('hidden');
     stopAutoCapture();
     stopDetection();
+    if (state.snipRegion) {
+      state.snipRegion = null;
+      btnSnip.innerHTML = '<span class="icon">✂</span> 範囲切り取り';
+      btnSnip.classList.remove('snip-active');
+    }
     setStatus('キャプチャ停止');
   }
 
@@ -137,6 +144,29 @@
     const dataUrl = captureCanvas.toDataURL('image/jpeg', quality);
     addScreenshot(dataUrl, w, h);
     setStatus(`スクショ #${state.screenshots.length} を撮影しました`);
+  }
+
+  function takeSnipScreenshot() {
+    if (!state.stream || !state.snipRegion) return;
+    const r = state.snipRegion;
+    const track = state.stream.getVideoTracks()[0];
+    const settings = track.getSettings();
+    const srcW = settings.width;
+    const srcH = settings.height;
+    // Draw full frame first
+    captureCanvas.width = srcW;
+    captureCanvas.height = srcH;
+    const ctx = captureCanvas.getContext('2d');
+    ctx.drawImage(videoPreview, 0, 0, srcW, srcH);
+    // Crop the snip region
+    const cropCanvas = document.createElement('canvas');
+    cropCanvas.width = r.w;
+    cropCanvas.height = r.h;
+    const cropCtx = cropCanvas.getContext('2d');
+    cropCtx.drawImage(captureCanvas, r.x, r.y, r.w, r.h, 0, 0, r.w, r.h);
+    const quality = parseFloat(imageQualitySelect.value);
+    const dataUrl = cropCanvas.toDataURL('image/jpeg', quality);
+    addScreenshot(dataUrl, r.w, r.h);
   }
 
   // ─── Auto Capture ───────────────────────────────────────
@@ -233,7 +263,13 @@
     // Determine detection region
     const region = detectRegion.value;
     let sx = 0, sy = 0, sw = srcW, sh = srcH;
-    if (region === 'center') {
+    if (state.snipRegion) {
+      // Use snip-selected region
+      sx = state.snipRegion.x;
+      sy = state.snipRegion.y;
+      sw = state.snipRegion.w;
+      sh = state.snipRegion.h;
+    } else if (region === 'center') {
       // Center 60%
       const marginX = srcW * 0.2;
       const marginY = srcH * 0.2;
@@ -280,7 +316,11 @@
             state.detectPhase = 'idle';
             state.detectCooldownUntil = now + cooldownMs;
             state.detectCount++;
-            takeScreenshot();
+            if (state.snipRegion) {
+              takeSnipScreenshot();
+            } else {
+              takeScreenshot();
+            }
             updateDetectMonitorState('撮影完了!');
             if (monitorCountEl) monitorCountEl.textContent = state.detectCount;
             setStatus(`ページめくり検知: #${state.detectCount} 自動撮影 (${state.screenshots.length}ページ目)`);
@@ -781,6 +821,15 @@
     snipFrameData = null;
   }
 
+  function clearSnipRegion() {
+    state.snipRegion = null;
+    btnSnip.innerHTML = '<span class="icon">✂</span> 範囲切り取り';
+    btnSnip.classList.remove('snip-active');
+    stopDetection();
+    pageDetectCheck.checked = false;
+    setStatus('範囲監視を解除しました');
+  }
+
   // Convert mouse coordinates to canvas pixel coordinates
   function snipEventToCanvas(e) {
     const rect = snipCanvas.getBoundingClientRect();
@@ -869,18 +918,22 @@
       return;
     }
 
-    // Crop from the snip canvas
-    const cropCanvas = document.createElement('canvas');
-    cropCanvas.width = cropW;
-    cropCanvas.height = cropH;
-    const cropCtx = cropCanvas.getContext('2d');
-    cropCtx.drawImage(snipCanvas, x1, y1, cropW, cropH, 0, 0, cropW, cropH);
-
-    const quality = parseFloat(imageQualitySelect.value);
-    const dataUrl = cropCanvas.toDataURL('image/jpeg', quality);
-    addScreenshot(dataUrl, cropW, cropH);
-    setStatus(`範囲切り取り: ${cropW}×${cropH}px を追加しました`);
+    // Save the snip region and start page-turn detection on it
+    state.snipRegion = { x: x1, y: y1, w: cropW, h: cropH };
+    detectRegion.value = 'custom';
     closeSnipOverlay();
+
+    // Auto-enable page-turn detection
+    pageDetectCheck.checked = true;
+    if (state.detectActive) stopDetection();
+    startDetection();
+
+    // Update snip button to show active state
+    btnSnip.textContent = '';
+    btnSnip.innerHTML = '<span class="icon">✂</span> 監視中: ' + cropW + '×' + cropH + 'px';
+    btnSnip.classList.add('snip-active');
+
+    setStatus(`範囲指定 (${cropW}×${cropH}px) でページめくり自動検知を開始しました — ページをめくると自動撮影します`);
   });
 
   // Touch support for mobile
@@ -909,7 +962,14 @@
   // ─── Event Bindings ────────────────────────────────────
   btnStartCapture.addEventListener('click', startCapture);
   btnTakeScreenshot.addEventListener('click', takeScreenshot);
-  btnSnip.addEventListener('click', openSnipOverlay);
+  btnSnip.addEventListener('click', () => {
+    if (state.snipRegion) {
+      // Already monitoring — clear and reset
+      clearSnipRegion();
+    } else {
+      openSnipOverlay();
+    }
+  });
   btnStopCapture.addEventListener('click', stopCapture);
   btnPasteImage.addEventListener('click', () => {
     // Attempt to read clipboard

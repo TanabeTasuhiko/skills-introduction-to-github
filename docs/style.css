@@ -555,6 +555,13 @@ header h1 {
 .btn-snip:hover:not(:disabled) {
   background: #9b59b6;
 }
+.btn-snip.snip-active {
+  background: #27ae60;
+  animation: pulse 1.5s infinite;
+}
+.btn-snip.snip-active:hover:not(:disabled) {
+  background: #c0392b;
+}
 
 /* Snip overlay */
 .snip-overlay {
