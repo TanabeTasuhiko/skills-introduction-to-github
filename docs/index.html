@@ -23,6 +23,9 @@
           <span class="icon">📸</span> スクショ撮影
           <kbd>Space</kbd>
         </button>
+        <button id="btn-snip" class="btn btn-accent btn-snip" disabled>
+          <span class="icon">✂</span> 範囲切り取り
+        </button>
         <button id="btn-stop-capture" class="btn btn-secondary" disabled>
           <span class="icon">⏹</span> キャプチャ停止
         </button>
@@ -149,6 +152,14 @@
     <video id="video-preview" autoplay playsinline style="display:none;"></video>
     <canvas id="capture-canvas" style="display:none;"></canvas>
     <canvas id="detect-canvas" style="display:none;"></canvas>
+
+    <!-- Snip overlay -->
+    <div id="snip-overlay" class="snip-overlay hidden">
+      <canvas id="snip-canvas"></canvas>
+      <div class="snip-selection" id="snip-selection"></div>
+      <div class="snip-instructions">ドラッグで範囲を選択 ／ Escでキャンセル</div>
+      <div class="snip-size-info" id="snip-size-info"></div>
+    </div>
 
     <!-- Drop zone overlay -->
     <div id="drop-overlay" class="drop-overlay hidden">

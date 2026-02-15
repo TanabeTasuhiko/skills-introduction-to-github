@@ -87,6 +87,7 @@
 
       btnStartCapture.disabled = true;
       btnTakeScreenshot.disabled = false;
+      btnSnip.disabled = false;
       btnStopCapture.disabled = false;
       captureStatus.classList.remove('hidden');
       setStatus('画面キャプチャ中 — Spaceキーでスクショ撮影');
@@ -114,6 +115,7 @@
     videoPreview.srcObject = null;
     btnStartCapture.disabled = false;
     btnTakeScreenshot.disabled = true;
+    btnSnip.disabled = true;
     btnStopCapture.disabled = true;
     captureStatus.classList.add('hidden');
     stopAutoCapture();
@@ -736,9 +738,178 @@
     return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
   }
 
+  // ─── Snip Tool (Region Capture) ────────────────────────
+  const btnSnip          = $('#btn-snip');
+  const snipOverlay      = $('#snip-overlay');
+  const snipCanvas       = $('#snip-canvas');
+  const snipSelection    = $('#snip-selection');
+  const snipSizeInfo     = $('#snip-size-info');
+
+  // Holds the full-res frame captured when snip overlay opens
+  let snipFrameData = null;  // { imageData, width, height }
+  let snipDragging = false;
+  let snipStart = { x: 0, y: 0 };
+
+  function openSnipOverlay() {
+    if (!state.stream) return;
+    const track = state.stream.getVideoTracks()[0];
+    const settings = track.getSettings();
+    const w = settings.width;
+    const h = settings.height;
+
+    // Capture current frame at full resolution
+    captureCanvas.width = w;
+    captureCanvas.height = h;
+    const ctx = captureCanvas.getContext('2d');
+    ctx.drawImage(videoPreview, 0, 0, w, h);
+
+    // Draw it on the snip canvas (displayed via CSS object-fit)
+    snipCanvas.width = w;
+    snipCanvas.height = h;
+    const snipCtx = snipCanvas.getContext('2d');
+    snipCtx.drawImage(captureCanvas, 0, 0);
+
+    snipFrameData = { width: w, height: h };
+    snipSelection.style.display = 'none';
+    snipSizeInfo.style.display = 'none';
+    snipOverlay.classList.remove('hidden');
+  }
+
+  function closeSnipOverlay() {
+    snipOverlay.classList.add('hidden');
+    snipDragging = false;
+    snipFrameData = null;
+  }
+
+  // Convert mouse coordinates to canvas pixel coordinates
+  function snipEventToCanvas(e) {
+    const rect = snipCanvas.getBoundingClientRect();
+    // Because canvas uses object-fit:contain, we need to compute the displayed area
+    const canvasAspect = snipCanvas.width / snipCanvas.height;
+    const displayAspect = rect.width / rect.height;
+
+    let displayW, displayH, offsetX, offsetY;
+    if (canvasAspect > displayAspect) {
+      // Letterboxed top/bottom
+      displayW = rect.width;
+      displayH = rect.width / canvasAspect;
+      offsetX = 0;
+      offsetY = (rect.height - displayH) / 2;
+    } else {
+      // Pillarboxed left/right
+      displayH = rect.height;
+      displayW = rect.height * canvasAspect;
+      offsetX = (rect.width - displayW) / 2;
+      offsetY = 0;
+    }
+
+    const scaleX = snipCanvas.width / displayW;
+    const scaleY = snipCanvas.height / displayH;
+    const cx = (e.clientX - rect.left - offsetX) * scaleX;
+    const cy = (e.clientY - rect.top - offsetY) * scaleY;
+    return {
+      cx: Math.max(0, Math.min(cx, snipCanvas.width)),
+      cy: Math.max(0, Math.min(cy, snipCanvas.height)),
+      // Also return screen coords for the selection div
+      sx: e.clientX,
+      sy: e.clientY,
+    };
+  }
+
+  snipOverlay.addEventListener('mousedown', (e) => {
+    if (e.button !== 0) return;
+    snipDragging = true;
+    const pos = snipEventToCanvas(e);
+    snipStart = { x: pos.cx, y: pos.cy, sx: pos.sx, sy: pos.sy };
+    snipSelection.style.left = pos.sx + 'px';
+    snipSelection.style.top = pos.sy + 'px';
+    snipSelection.style.width = '0px';
+    snipSelection.style.height = '0px';
+    snipSelection.style.display = 'block';
+    snipSizeInfo.style.display = 'none';
+  });
+
+  snipOverlay.addEventListener('mousemove', (e) => {
+    if (!snipDragging) return;
+    const pos = snipEventToCanvas(e);
+    const left = Math.min(snipStart.sx, pos.sx);
+    const top = Math.min(snipStart.sy, pos.sy);
+    const w = Math.abs(pos.sx - snipStart.sx);
+    const h = Math.abs(pos.sy - snipStart.sy);
+    snipSelection.style.left = left + 'px';
+    snipSelection.style.top = top + 'px';
+    snipSelection.style.width = w + 'px';
+    snipSelection.style.height = h + 'px';
+
+    // Show pixel dimensions
+    const canvasW = Math.abs(Math.round(pos.cx - snipStart.x));
+    const canvasH = Math.abs(Math.round(pos.cy - snipStart.y));
+    snipSizeInfo.textContent = `${canvasW} × ${canvasH} px`;
+    snipSizeInfo.style.display = 'block';
+    snipSizeInfo.style.left = (left + w + 8) + 'px';
+    snipSizeInfo.style.top = (top + h + 8) + 'px';
+  });
+
+  snipOverlay.addEventListener('mouseup', (e) => {
+    if (!snipDragging) return;
+    snipDragging = false;
+    const pos = snipEventToCanvas(e);
+
+    const x1 = Math.round(Math.min(snipStart.x, pos.cx));
+    const y1 = Math.round(Math.min(snipStart.y, pos.cy));
+    const x2 = Math.round(Math.max(snipStart.x, pos.cx));
+    const y2 = Math.round(Math.max(snipStart.y, pos.cy));
+    const cropW = x2 - x1;
+    const cropH = y2 - y1;
+
+    if (cropW < 10 || cropH < 10) {
+      // Too small, ignore
+      snipSelection.style.display = 'none';
+      snipSizeInfo.style.display = 'none';
+      return;
+    }
+
+    // Crop from the snip canvas
+    const cropCanvas = document.createElement('canvas');
+    cropCanvas.width = cropW;
+    cropCanvas.height = cropH;
+    const cropCtx = cropCanvas.getContext('2d');
+    cropCtx.drawImage(snipCanvas, x1, y1, cropW, cropH, 0, 0, cropW, cropH);
+
+    const quality = parseFloat(imageQualitySelect.value);
+    const dataUrl = cropCanvas.toDataURL('image/jpeg', quality);
+    addScreenshot(dataUrl, cropW, cropH);
+    setStatus(`範囲切り取り: ${cropW}×${cropH}px を追加しました`);
+    closeSnipOverlay();
+  });
+
+  // Touch support for mobile
+  snipOverlay.addEventListener('touchstart', (e) => {
+    const touch = e.touches[0];
+    snipOverlay.dispatchEvent(new MouseEvent('mousedown', {
+      clientX: touch.clientX, clientY: touch.clientY, button: 0,
+    }));
+  }, { passive: true });
+
+  snipOverlay.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    snipOverlay.dispatchEvent(new MouseEvent('mousemove', {
+      clientX: touch.clientX, clientY: touch.clientY,
+    }));
+  });
+
+  snipOverlay.addEventListener('touchend', (e) => {
+    const touch = e.changedTouches[0];
+    snipOverlay.dispatchEvent(new MouseEvent('mouseup', {
+      clientX: touch.clientX, clientY: touch.clientY,
+    }));
+  });
+
   // ─── Event Bindings ────────────────────────────────────
   btnStartCapture.addEventListener('click', startCapture);
   btnTakeScreenshot.addEventListener('click', takeScreenshot);
+  btnSnip.addEventListener('click', openSnipOverlay);
   btnStopCapture.addEventListener('click', stopCapture);
   btnPasteImage.addEventListener('click', () => {
     // Attempt to read clipboard
@@ -775,8 +946,12 @@
       e.preventDefault();
       takeScreenshot();
     }
-    // Escape = close lightbox
+    // Escape = close snip overlay or lightbox
     if (e.code === 'Escape') {
+      if (!snipOverlay.classList.contains('hidden')) {
+        closeSnipOverlay();
+        return;
+      }
       const lb = document.querySelector('.lightbox');
       if (lb) lb.classList.add('hidden');
     }
