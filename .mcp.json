@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "freee": {
+      "type": "url",
+      "url": "https://mcp.freee.co.jp/mcp"
+    }
+  }
+}
