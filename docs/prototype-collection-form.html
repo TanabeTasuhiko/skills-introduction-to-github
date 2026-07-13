@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>月次資料 提出フォーム(プロトタイプ)</title>
+<style>
+  :root {
+    --green: #0e7a4f;
+    --green-dark: #0a5c3b;
+    --green-pale: #e8f5ee;
+    --ink: #1f2933;
+    --sub: #5c6b7a;
+    --line: #dde4ea;
+    --bg: #f4f6f8;
+    --warn-bg: #fff8e6;
+    --warn-line: #e8c96a;
+    --danger: #c0392b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Hiragino Sans", "Noto Sans JP", "Yu Gothic", sans-serif; background: var(--bg); color: var(--ink); line-height: 1.7; }
+  .demo-banner { background: #34495e; color: #fff; text-align: center; font-size: 12px; padding: 6px; letter-spacing: .05em; }
+  header.site { background: #fff; padding: 14px; text-align: center; border-bottom: 1px solid var(--line); font-weight: 700; color: var(--green-dark); }
+  .hero { background: var(--green); color: #fff; padding: 28px 16px; }
+  .hero .inner { max-width: 640px; margin: 0 auto; }
+  .hero .tag { display: inline-block; background: rgba(255,255,255,.18); border-radius: 4px; font-size: 12px; padding: 2px 10px; margin-bottom: 8px; }
+  .hero h1 { font-size: 22px; }
+  .hero p { font-size: 13px; opacity: .9; margin-top: 6px; }
+  main { max-width: 640px; margin: 0 auto; padding: 20px 14px 60px; }
+  .card { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 20px; margin-top: 18px; }
+  .card h2 { font-size: 15px; color: var(--green-dark); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+  .step-no { background: var(--green); color: #fff; font-size: 11px; border-radius: 999px; padding: 2px 10px; white-space: nowrap; }
+  .badge-req { background: var(--danger); color: #fff; font-size: 10px; border-radius: 3px; padding: 1px 6px; vertical-align: middle; margin-left: 6px; }
+
+  /* 区分バッジ */
+  .rank { display: flex; gap: 14px; align-items: center; }
+  .rank-badge { min-width: 84px; text-align: center; background: #f0f4ff; border: 2px solid #4a6fd6; color: #2c4aa8; border-radius: 10px; padding: 10px 6px; font-weight: 700; }
+  .rank-badge small { display: block; font-weight: 400; font-size: 10px; color: var(--sub); }
+  .rank-info { font-size: 13px; }
+  .rank-progress { background: var(--line); border-radius: 999px; height: 8px; margin-top: 8px; overflow: hidden; }
+  .rank-progress span { display: block; height: 100%; width: 66%; background: linear-gradient(90deg, #4a6fd6, #d4a017); }
+  .rank-note { font-size: 12px; color: var(--sub); margin-top: 6px; }
+
+  /* 締切 */
+  .deadline { display: flex; justify-content: space-between; align-items: center; background: var(--green-pale); border: 1px solid #bfe0cf; border-radius: 10px; padding: 14px 18px; margin-top: 18px; }
+  .deadline strong { font-size: 18px; color: var(--green-dark); }
+  .deadline .days { text-align: center; }
+  .deadline .days b { font-size: 26px; color: var(--danger); }
+
+  /* 注意事項 */
+  .notice { background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 10px; padding: 16px 18px; margin-top: 18px; font-size: 13px; }
+  .notice h3 { font-size: 13px; margin-bottom: 8px; }
+  .notice ul { padding-left: 20px; }
+  .notice li { margin-bottom: 4px; }
+  .agree { display: flex; gap: 8px; align-items: flex-start; margin-top: 12px; font-weight: 700; font-size: 13px; }
+  .agree input { width: 18px; height: 18px; margin-top: 3px; }
+
+  /* フォーム部品 */
+  label.fl { display: block; font-size: 13px; font-weight: 700; margin: 14px 0 4px; }
+  input[type=text], input[type=email], select { width: 100%; border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; font-size: 14px; background: #fff; }
+  input:disabled { background: #f1f3f5; color: var(--sub); }
+  .hint { font-size: 11px; color: var(--sub); margin-top: 2px; }
+
+  /* チェックリスト */
+  .progress-wrap { position: sticky; top: 0; z-index: 5; background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; font-size: 13px; }
+  .progress-bar { background: var(--line); height: 10px; border-radius: 999px; margin-top: 6px; overflow: hidden; }
+  .progress-bar span { display: block; height: 100%; width: 0; background: var(--green); transition: width .3s; }
+  .doc-item { border: 1px solid var(--line); border-radius: 10px; padding: 14px; margin-bottom: 12px; display: grid; grid-template-columns: 88px 1fr; gap: 14px; }
+  .doc-item.done { border-color: var(--green); background: var(--green-pale); }
+  .doc-thumb { width: 88px; height: 110px; border: 1px dashed #9db4a8; border-radius: 6px; background: repeating-linear-gradient(0deg, #fff, #fff 12px, #f0f5f2 12px, #f0f5f2 14px); display: flex; align-items: flex-end; justify-content: center; font-size: 10px; color: var(--sub); padding-bottom: 6px; }
+  .doc-body h4 { font-size: 14px; }
+  .doc-body .tip { font-size: 12px; color: var(--sub); margin: 4px 0 8px; }
+  .doc-body input[type=file] { font-size: 12px; }
+  .done-mark { color: var(--green-dark); font-weight: 700; font-size: 12px; display: none; }
+  .doc-item.done .done-mark { display: inline; }
+
+  /* 教育アコーディオン */
+  details { border: 1px solid var(--line); border-radius: 8px; margin-bottom: 8px; background: #fff; }
+  details summary { cursor: pointer; padding: 12px 14px; font-size: 13px; font-weight: 700; color: var(--green-dark); }
+  details .detail-body { padding: 0 16px 14px; font-size: 13px; }
+  table.mini { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 6px; }
+  table.mini th, table.mini td { border: 1px solid var(--line); padding: 6px 8px; text-align: left; }
+  table.mini th { background: var(--green-pale); }
+
+  /* 送信 */
+  .submit-btn { display: block; width: 100%; margin-top: 22px; background: var(--green); color: #fff; font-size: 16px; font-weight: 700; border: none; border-radius: 10px; padding: 16px; cursor: pointer; }
+  .submit-btn:disabled { background: #b8c4bd; cursor: not-allowed; }
+  .submit-note { text-align: center; font-size: 12px; color: var(--sub); margin-top: 10px; }
+  footer { text-align: center; font-size: 11px; color: var(--sub); padding: 24px 0 40px; }
+</style>
+</head>
+<body>
+
+<div class="demo-banner">プロトタイプ(デモ)— 送信機能はダミーです</div>
+<header class="site">○○会計事務所</header>
+
+<div class="hero">
+  <div class="inner">
+    <span class="tag">2026年6月分 月次資料</span>
+    <h1>資料提出フォーム</h1>
+    <p>資料のご提出はこのフォームからのみ受け付けています(メール添付・LINE写真での送付はご遠慮ください)</p>
+  </div>
+</div>
+
+<main>
+
+  <!-- 顧客区分バッジ -->
+  <div class="card">
+    <h2>貴社の現在の区分</h2>
+    <div class="rank">
+      <div class="rank-badge">一般<small>ブルー</small></div>
+      <div class="rank-info">
+        直近6ヶ月:遅延1回・不備率8%
+        <div class="rank-progress"><span></span></div>
+        <div class="rank-note">あと<b>2ヶ月</b>連続で期限内提出されると<b>優良(ゴールド)</b>に昇格し、月次報酬が5%割引になります。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 締切 -->
+  <div class="deadline">
+    <div>今月の提出締切<br><strong>2026年7月25日(土)</strong></div>
+    <div class="days">締切まで<br><b id="days-left">–</b> 日</div>
+  </div>
+
+  <!-- 注意事項+同意 -->
+  <div class="notice">
+    <h3>ご提出にあたっての注意事項</h3>
+    <ul>
+      <li>締切を<b>7日以上</b>超過した場合、当月分は翌月処理となり、月次報酬に<b>20%の割増</b>が発生します。</li>
+      <li>不備による差し戻しが同一月に3回以上発生した場合も割増の対象です。</li>
+      <li>期限内のご提出が続くと区分が上がり、報酬の割引・優先処理の対象になります。</li>
+    </ul>
+    <label class="agree"><input type="checkbox" id="agree1">上記の注意事項を確認し、同意します</label>
+  </div>
+
+  <!-- STEP1 -->
+  <div class="card">
+    <h2><span class="step-no">STEP 1</span> 基本情報(自動入力済み)</h2>
+    <label class="fl">会社名</label>
+    <input type="text" value="株式会社サンプル商事" disabled>
+    <label class="fl">ご担当者名<span class="badge-req">必須</span></label>
+    <input type="text" placeholder="例)山田 太郎">
+    <label class="fl">メールアドレス<span class="badge-req">必須</span></label>
+    <input type="email" placeholder="例)taro@example.com">
+    <p class="hint">受領確認と不足資料のご連絡をお送りします</p>
+  </div>
+
+  <!-- STEP2 -->
+  <div class="card">
+    <h2><span class="step-no">STEP 2</span> 今月の必要資料(貴社専用リスト)</h2>
+
+    <div class="progress-wrap">
+      提出状況:<b id="prog-text">0 / 4</b>
+      <div class="progress-bar"><span id="prog-bar"></span></div>
+    </div>
+
+    <div class="doc-item" data-doc>
+      <div class="doc-thumb">見本:通帳コピー</div>
+      <div class="doc-body">
+        <h4>普通預金 通帳コピー(6月分)<span class="badge-req">必須</span></h4>
+        <p class="tip">💡 ネットバンキングのCSVならこの欄は不要になります(連携設定は無料でお手伝いします)</p>
+        <input type="file" accept=".pdf,.png,.jpg,.jpeg,.csv">
+        <span class="done-mark">✓ 添付済み</span>
+      </div>
+    </div>
+
+    <div class="doc-item" data-doc>
+      <div class="doc-thumb">見本:レシート撮影</div>
+      <div class="doc-body">
+        <h4>現金払いの領収書・レシート<span class="badge-req">必須</span></h4>
+        <p class="tip">💡 撮り方:平らに置く/影を入れない/1枚ずつでなく10枚まで並べてOK(<a href="#">5分の解説動画</a>)</p>
+        <input type="file" accept=".pdf,.png,.jpg,.jpeg" multiple>
+        <span class="done-mark">✓ 添付済み</span>
+      </div>
+    </div>
+
+    <div class="doc-item" data-doc>
+      <div class="doc-thumb">見本:請求書</div>
+      <div class="doc-body">
+        <h4>発行した請求書(売上)<span class="badge-req">必須</span></h4>
+        <p class="tip">💡 請求ソフト(Misoca等)をお使いの場合はPDF一括ダウンロードが便利です</p>
+        <input type="file" accept=".pdf,.png,.jpg,.jpeg,.xlsx" multiple>
+        <span class="done-mark">✓ 添付済み</span>
+      </div>
+    </div>
+
+    <div class="doc-item" data-doc>
+      <div class="doc-thumb">見本:給与明細</div>
+      <div class="doc-body">
+        <h4>給与明細・賃金台帳(6月支給分)<span class="badge-req">必須</span></h4>
+        <p class="tip">💡 クラウド給与をご利用の場合、連携済みなら「連携済み」を選択してください</p>
+        <input type="file" accept=".pdf,.png,.jpg,.jpeg,.csv">
+        <span class="done-mark">✓ 添付済み</span>
+      </div>
+    </div>
+
+    <h2 style="margin-top:20px">迷ったらこちら(30秒で解決)</h2>
+    <details>
+      <summary>📖 これはどの科目?領収書早見表</summary>
+      <div class="detail-body">
+        <table class="mini">
+          <tr><th>買ったもの</th><th>科目</th><th>ひとこと</th></tr>
+          <tr><td>取引先との飲食</td><td>接待交際費</td><td>参加者名をレシート裏にメモ</td></tr>
+          <tr><td>社内の飲み物・弁当</td><td>福利厚生費</td><td>全員が対象ならOK</td></tr>
+          <tr><td>電車・タクシー</td><td>旅費交通費</td><td>行き先をメモ</td></tr>
+          <tr><td>文房具・少額備品</td><td>消耗品費</td><td>10万円以上は要相談</td></tr>
+          <tr><td>ソフト利用料・サブスク</td><td>通信費/支払手数料</td><td>迷ったらそのまま提出でOK</td></tr>
+        </table>
+      </div>
+    </details>
+    <details>
+      <summary>⚠️ よくある不備 TOP3(差し戻しを防ぐ)</summary>
+      <div class="detail-body">
+        <ol style="padding-left:18px">
+          <li><b>レシートがぼやけている</b> → 影を避けて真上から撮影</li>
+          <li><b>通帳の月末ページが欠けている</b> → 月末残高の載ったページまで含める</li>
+          <li><b>クレジット明細の重複提出</b> → カード連携済みの方は明細の提出は不要です</li>
+        </ol>
+      </div>
+    </details>
+    <details>
+      <summary>🎬 スマホ撮影のコツ(5分動画)</summary>
+      <div class="detail-body">動画リンクをここに埋め込みます(YouTube限定公開などで一度作れば全顧客で共有できます)。</div>
+    </details>
+  </div>
+
+  <!-- STEP3 -->
+  <div class="card">
+    <h2><span class="step-no">STEP 3</span> 確認・送信</h2>
+    <label class="agree"><input type="checkbox" id="agree2">個人情報の取り扱いに同意します</label>
+    <button class="submit-btn" id="submit" disabled>上記の内容で提出する</button>
+    <p class="submit-note">送信後、受領確認メールをお送りします。不足がある場合は自動でご連絡します。</p>
+  </div>
+
+</main>
+
+<footer>
+  ○○会計事務所|プロトタイプ画面(実データは送信されません)
+</footer>
+
+<script>
+  // 締切カウントダウン
+  const deadline = new Date('2026-07-25T23:59:59+09:00');
+  const days = Math.max(0, Math.ceil((deadline - new Date()) / 86400000));
+  document.getElementById('days-left').textContent = days;
+
+  // 提出進捗
+  const items = document.querySelectorAll('[data-doc]');
+  const progText = document.getElementById('prog-text');
+  const progBar = document.getElementById('prog-bar');
+  function refreshProgress() {
+    const done = document.querySelectorAll('[data-doc].done').length;
+    progText.textContent = done + ' / ' + items.length;
+    progBar.style.width = (done / items.length * 100) + '%';
+  }
+  items.forEach(item => {
+    item.querySelector('input[type=file]').addEventListener('change', e => {
+      item.classList.toggle('done', e.target.files.length > 0);
+      refreshProgress();
+    });
+  });
+
+  // 同意2つ揃って送信可能
+  const a1 = document.getElementById('agree1');
+  const a2 = document.getElementById('agree2');
+  const btn = document.getElementById('submit');
+  function refreshSubmit() { btn.disabled = !(a1.checked && a2.checked); }
+  a1.addEventListener('change', refreshSubmit);
+  a2.addEventListener('change', refreshSubmit);
+  btn.addEventListener('click', () => alert('デモ:本番ではGASやフォームサービスに送信し、受領確認メール+スプレッドシートのステータス更新を自動実行します。'));
+</script>
+
+</body>
+</html>
